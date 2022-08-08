@@ -7,20 +7,22 @@ import webbrowser
 from arroyo_salesforce.oauth_server import CallbackServer
 from urllib.parse import urlsplit, urljoin
 import os
+from typing import Callable
 os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = "1"
 AUTH_URL = 'https://login.salesforce.com/services/oauth2/authorize'
 TOKEN_URL = 'https://login.salesforce.com/services/oauth2/token'
 REDIRECT_URI = 'http://localhost:8000/callback'
 
 
-def login(client_id, client_secret, token=None):
+def login(client_id: str = None, client_secret: str = None, token: dict = None,
+          token_updater: Callable = lambda x: True):
     salesforce = salesforce_compliance_fix(
         OAuth2Session(client_id, token=token,
                       redirect_uri=REDIRECT_URI,
                       scope='refresh_token openid web full' if not token else None,
                       auto_refresh_url=TOKEN_URL,
                       auto_refresh_kwargs={'client_id': client_id, 'client_secret': client_secret},
-                      token_updater=lambda x: True)
+                      token_updater=token_updater)
     )
     if not token or not token.get('refresh_token'):
         authorization_url, state = salesforce.authorization_url(AUTH_URL)

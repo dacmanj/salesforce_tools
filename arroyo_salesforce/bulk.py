@@ -1,5 +1,6 @@
 from arroyo_salesforce.salesforce import SalesforceAPI
 from enum import Enum
+import sqlite3
 
 
 class SalesforceJobStatus(Enum):
@@ -11,6 +12,11 @@ class SalesforceJobStatus(Enum):
 class SalesforceBulkContentType(Enum):
     CSV = 'CSV'
     JSON = 'JSON'
+
+
+class SalesforceBulkConcurrencyMode(Enum):
+    PARALLEL = 'Parallel'
+    SERIAL = 'Serial'
 
 
 class SalesforceBulkOperation(Enum):

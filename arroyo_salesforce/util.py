@@ -1,6 +1,6 @@
 import math
 from datetime import datetime
-from dateutil import relativedelta
+from dateutil.relativedelta import relativedelta
 
 
 def datetime_as_str(d: datetime = datetime.now(), days: int = 0, months: int = 0, years: int = 0, hours: int =12) -> str:
