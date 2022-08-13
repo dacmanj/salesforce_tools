@@ -25,7 +25,8 @@ def login(client_id: str = None, client_secret: str = None, token: dict = None,
                       scope='refresh_token openid web full' if not token else None,
                       auto_refresh_url=TOKEN_URL,
                       auto_refresh_kwargs={'client_id': client_id, 'client_secret': client_secret},
-                      token_updater=token_updater)
+                      token_updater=token_updater
+                      )
     )
     if not token or not token.get('refresh_token'):
         authorization_url, state = salesforce.authorization_url(AUTH_URL)
@@ -60,8 +61,13 @@ def salesforce_compliance_fix(sess):
 class SalesforceOAuthClient(WebApplicationClient):
     def _add_bearer_token(self, uri, http_method='GET', body=None,
                           headers=None, token_placement=None):
-        uri, headers, body = super()._add_bearer_token(uri, http_method=http_method, body=body,
-                                headers=headers, token_placement=token_placement)
+        uri, headers, body = super()._add_bearer_token(
+            uri,
+            http_method=http_method,
+            body=body,
+            headers=headers,
+            token_placement=token_placement
+        )
 
         headers['X-SFDC-Session'] = self.token.get('access_token')
         return uri, headers, body

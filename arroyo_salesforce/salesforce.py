@@ -1,6 +1,7 @@
 from arroyo_salesforce.auth import login
 from urllib.parse import urljoin, urlencode
 import webbrowser
+import xmltodict
 
 
 class SalesforceAPI(object):
@@ -16,10 +17,23 @@ class SalesforceAPI(object):
         self.args = kwargs
 
     def request(self, url, method='GET', **kwargs):
+        kwargs['headers'] = kwargs.get('headers', {'Content-Type': 'application/json',
+                                                   'Accepts': 'application/json',
+                                                   'charset': 'UTF-8'})
         url = urljoin(self.instance_url, url)
-        return self.session.request(method, url, **kwargs)
+        req = self.session.request(method, url, **kwargs)
+        return self._force_dict_response(req)
 
-    def open_sf(self, url=None):
+    def _force_dict_response(self, resp):
+        if 'application/xml' in resp.headers['Content-Type']:
+            data = xmltodict.parse(resp.text)
+        elif 'application/json' in resp.headers['Content-Type']:
+            data = resp.json()
+        else:
+            data = resp.text
+        return data, resp.ok, resp.status_code, resp
+
+    def open_sf(self, url=''):
         sid = self.session.token.get('access_token')
         qs = urlencode({'sid': sid, 'retURL': url})
         url = urljoin(self.instance_url, f'/secur/frontdoor.jsp?{qs}')

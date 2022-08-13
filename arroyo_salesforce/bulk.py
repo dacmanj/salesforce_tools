@@ -1,32 +1,10 @@
 from arroyo_salesforce.salesforce import SalesforceAPI
 from enum import Enum
-import sqlite3
-
-
-class SalesforceJobStatus(Enum):
-    ABORTED = 'Aborted'
-    CLOSED = 'Closed'
-    OPEN = 'Open'
-
-
-class SalesforceBulkContentType(Enum):
-    CSV = 'CSV'
-    JSON = 'JSON'
-
-
-class SalesforceBulkConcurrencyMode(Enum):
-    PARALLEL = 'Parallel'
-    SERIAL = 'Serial'
-
-
-class SalesforceBulkOperation(Enum):
-    UPSERT = 'upsert'
-    UPDATE = 'update'
-    INSERT = 'insert'
-    DELETE = 'delete'
-    HARD_DELETE = 'hardDelete'
-    QUERY = 'query'
-    QUERY_ALL = 'queryAll'
+from arroyo_salesforce.bulk_models import JobInfo, JobInfoList, BatchInfo, BatchInfoList, \
+    OperationEnum, ContentTypeEnum, ContentTypeHeaderEnum, JobTypeEnum, JobStateEnum, BulkAPIError, APIError,\
+    BulkException
+from typing import Union, Optional, List
+from pydantic import BaseModel, ValidationError, parse_obj_as
 
 
 class SalesforceBulkJobException(Exception):
@@ -38,29 +16,81 @@ def get_enum_or_val(e):
 
 
 class SalesforceBulkAPI(SalesforceAPI):
-    def create_job(self,
-                   operation=None,
-                   sf_object=None,
-                   external_id_field_name=None,
-                   content_type=SalesforceBulkContentType.CSV):
-        url = f'/services/async/{self.api_version}/job'
-        if not (operation and sf_object) or (get_enum_or_val(operation) == SalesforceBulkOperation.UPSERT.value
-                                             and not external_id_field_name):
-            raise SalesforceBulkJobException('Job must have operation and Salesforce object specified. '
-                                             'If job is an upsert then an external id must be specified.')
+    job: Optional[Union[JobInfo, BulkAPIError]]
+    batches: List[BatchInfo] = []
 
-        d = {
-          "operation": get_enum_or_val(operation),
-          "object": sf_object,
-          "contentType": get_enum_or_val(content_type)
-        }
-        if external_id_field_name:
-            d['externalIdFieldName'] = external_id_field_name
-        return self.request(url, method='POST', json=d)
+    def __init__(self, job_id: str = None, job: JobInfo = None, **kwargs):
+        super().__init__(**kwargs)
+        self.job = kwargs.get('job', self.set_job(job_id) if job_id else job)
 
-    def create_batch(self, job_id):
+    def create_job(self, job: JobInfo):
+        url = f'/services/data/v{self.api_version}/jobs/ingest' if job.job_type == JobTypeEnum.V2Ingest\
+            else f'/services/async/{self.api_version}/job'
+        if not job.id:
+            d = job.dict(by_alias=True, exclude_none=True, exclude={'job_type'})
+            job, ok, *_ = self.request(url, method='POST', json=d)
+            self.job = self._model_wrap(job, ok, JobInfo, True)
+        return self.job
+
+    # TODO: Where to put "static helper methods"?
+    def get_jobs(self):
+        jobs, ok, *_ = self.request(f'/services/data/v{self.api_version}/jobs/ingest')
+        return self._model_wrap(jobs, ok, JobInfoList, False)
+
+    def create_batch(self, data):
+        if isinstance(self.job, BulkAPIError):
+            raise BulkException(self.job)
+        job_id = self.job.id
+        content_type = getattr(ContentTypeHeaderEnum, self.job.content_type).value
         url = f'/services/async/{self.api_version}/job/{job_id}/batch'
+        data, ok, *_ = self.request(url, method='POST', data=data, headers={'Content-Type': content_type})
+        batch = self._model_wrap(data, ok, BatchInfo, False)
+        self.batches.append(batch)
+        return batch
 
-    def close_job(self, job_id, state=SalesforceJobStatus.CLOSED.value):
+    def _model_wrap(self, data: any, ok: bool, model: BaseModel, raise_exception_on_error=False):
+        if ok:
+            o = parse_obj_as(model, data)
+        else:
+            if isinstance(data, list):
+                try:
+                    o = parse_obj_as(List[BulkAPIError], data)
+                except ValidationError:
+                    o = parse_obj_as(List[APIError], data)
+            else:
+                if data.get('error'):
+                    data = data.get('error')
+                try:
+                    o = parse_obj_as(BulkAPIError, data)
+                except ValidationError:
+                    o = parse_obj_as(APIError, data)
+
+            if raise_exception_on_error:
+                raise o
+        return o
+
+    def close_job(self, job_id: str = None, state: JobStateEnum = JobStateEnum.UploadComplete):
+        job_id = job_id or self.job.id
         url = f'/services/async/{self.api_version}/job/{job_id}'
-        return self.request(url, method='POST', json={"state": state})
+        data, ok, *_ = self.request(url, method='POST', json={"state": state.value})
+        job = self._model_wrap(data, ok, JobInfo, False)
+        if ok and job.id == self.job.id:
+            self.job = job
+        return job
+
+    def set_job(self, job_id):
+        url = f'/services/async/{self.api_version}/job/{job_id}'
+        data, ok, *_ = self.request(url, method='GET')
+        self.job = self._model_wrap(data, ok, JobInfo, True)
+        return self.job
+
+    def get_batch_info(self, batch: BatchInfo = None, batch_id: str = None):
+        url = f'/services/async/{self.api_version}/job/{self.job.id}/batch'
+        data, ok, *_ = self.request(url, method='GET')
+        return self._model_wrap(data, ok, BatchInfoList, False)
+
+    def get_batches(self, job_id:str = None):
+        url = f'/services/async/{self.api_version}/job/{self.job.id}/batch'
+        data, ok, *_ = self.request(url, method='GET')
+        self.batches = self._model_wrap(data, ok, BatchInfoList, True).records
+        return self.batches
