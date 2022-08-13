@@ -1,5 +1,6 @@
 from arroyo_salesforce.auth import login
-from urllib.parse import urljoin
+from urllib.parse import urljoin, urlencode
+import webbrowser
 
 
 class SalesforceAPI(object):
@@ -16,7 +17,11 @@ class SalesforceAPI(object):
 
     def request(self, url, method='GET', **kwargs):
         url = urljoin(self.instance_url, url)
-        h = {'X-SFDC-Session': self.session.token.get('access_token')}
-        if kwargs.get('headers'):
-            h.merge(kwargs.get('headers'))
-        return self.session.request(method, url, headers=h, **kwargs)
+        return self.session.request(method, url, **kwargs)
+
+    def open_sf(self, url=None):
+        sid = self.session.token.get('access_token')
+        qs = urlencode({'sid': sid, 'retURL': url})
+        url = urljoin(self.instance_url, f'/secur/frontdoor.jsp?{qs}')
+        webbrowser.open(url)
+

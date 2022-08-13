@@ -38,9 +38,11 @@ def get_enum_or_val(e):
 
 
 class SalesforceBulkAPI(SalesforceAPI):
-    def create_job(self, operation=None, sf_object=None,
-                   content_type=SalesforceBulkContentType.CSV,
-                   external_id_field_name=None):
+    def create_job(self,
+                   operation=None,
+                   sf_object=None,
+                   external_id_field_name=None,
+                   content_type=SalesforceBulkContentType.CSV):
         url = f'/services/async/{self.api_version}/job'
         if not (operation and sf_object) or (get_enum_or_val(operation) == SalesforceBulkOperation.UPSERT.value
                                              and not external_id_field_name):
