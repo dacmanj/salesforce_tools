@@ -8,6 +8,8 @@ from arroyo_salesforce.oauth_server import CallbackServer
 from urllib.parse import urlsplit, urljoin
 import os
 from typing import Callable
+from oauthlib.oauth2 import WebApplicationClient
+
 os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = "1"
 AUTH_URL = 'https://login.salesforce.com/services/oauth2/authorize'
 TOKEN_URL = 'https://login.salesforce.com/services/oauth2/token'
@@ -17,7 +19,8 @@ REDIRECT_URI = 'http://localhost:8000/callback'
 def login(client_id: str = None, client_secret: str = None, token: dict = None,
           token_updater: Callable = lambda x: True):
     salesforce = salesforce_compliance_fix(
-        OAuth2Session(client_id, token=token,
+        OAuth2Session(token=token,
+                      client=SalesforceOAuthClient(client_id),
                       redirect_uri=REDIRECT_URI,
                       scope='refresh_token openid web full' if not token else None,
                       auto_refresh_url=TOKEN_URL,
@@ -37,6 +40,7 @@ def login(client_id: str = None, client_secret: str = None, token: dict = None,
 
 
 def salesforce_compliance_fix(sess):
+    token = ''
     def _compliance_fix(response):
         token = json.loads(response.text)
         if token.get('issued_at'):
@@ -53,3 +57,11 @@ def salesforce_compliance_fix(sess):
     return sess
 
 
+class SalesforceOAuthClient(WebApplicationClient):
+    def _add_bearer_token(self, uri, http_method='GET', body=None,
+                          headers=None, token_placement=None):
+        uri, headers, body = super()._add_bearer_token(uri, http_method=http_method, body=body,
+                                headers=headers, token_placement=token_placement)
+
+        headers['X-SFDC-Session'] = self.token.get('access_token')
+        return uri, headers, body
