@@ -1,5 +1,4 @@
 from requests_oauthlib import OAuth2Session
-from flask.json import jsonify
 import json
 from oauthlib.common import to_unicode
 from datetime import datetime, timedelta
