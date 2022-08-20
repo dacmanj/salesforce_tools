@@ -19,17 +19,31 @@ class SalesforceBulkAPI(SalesforceAPI):
     job: Optional[Union[JobInfo, BulkAPIError]]
     batches: List[BatchInfo] = []
 
+    @property
+    def job(self):
+        return self.__job
+
+    @job.setter
+    def job(self, value: JobInfo):
+        if value and not value.job_type and value.content_url:
+            value.job_type == JobTypeEnum.Classic if 'ingest' not in value.content_url else JobTypeEnum.V2Ingest
+            self.job_type = value.job_type
+        self.__job = value
+
     def __init__(self, job_id: str = None, job: JobInfo = None, **kwargs):
         super().__init__(**kwargs)
         self.job = kwargs.get('job', self.set_job(job_id) if job_id else job)
 
     def create_job(self, job: JobInfo):
-        url = f'/services/data/v{self.api_version}/jobs/ingest' if job.job_type == JobTypeEnum.V2Ingest\
+        job_type = JobTypeEnum.V2Ingest if job.job_type == JobTypeEnum.V2Ingest else JobTypeEnum.Classic
+
+        url = f'/services/data/v{self.api_version}/jobs/ingest' if job_type == JobTypeEnum.V2Ingest\
             else f'/services/async/{self.api_version}/job'
         if not job.id:
             d = job.dict(by_alias=True, exclude_none=True, exclude={'job_type'})
             job, ok, *_ = self.request(url, method='POST', json=d)
             self.job = self._model_wrap(job, ok, JobInfo, True)
+            self.job.job_type = job_type
         return self.job
 
     # TODO: Where to put "static helper methods"?
