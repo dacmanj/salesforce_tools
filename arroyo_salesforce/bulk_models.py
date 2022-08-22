@@ -76,7 +76,7 @@ class JobInfo(BaseModel):
     api_active_processing_time: Optional[int] = Field(alias='apiActiveProcessingTime')
     assignment_rule_id: Optional[str] = Field(alias='assignmentRuleId')
     concurrency_mode: Optional[ConcurrencyModeEnum] = Field(alias='concurrencyMode')
-    content_type: ContentTypeEnum = Field(alias='contentType')
+    content_type: ContentTypeEnum = Field(alias='contentType', default=ContentTypeEnum.CSV)
     created_by_id: Optional[str] = Field(alias='createdById')
     created_date: Optional[datetime.datetime] = Field(alias='createdDate')
     external_id_field_name: Optional[str] = Field(alias='externalIdFieldName')
@@ -89,21 +89,25 @@ class JobInfo(BaseModel):
     number_records_failed: Optional[int] = Field(alias='numberRecordsFailed')
     number_records_processed: Optional[int] = Field(alias='numberRecordsProcessed')
     number_retries: Optional[int] = Field(alias='numberRetries')
-    sobject: str = Field(alias='object')
+    sobject: Optional[str] = Field(alias='object')
     operation: OperationEnum
     state: Optional[JobStateEnum]
     column_delimiter: Optional[ColumnDelimiterEnum] \
         = Field(alias='columnDelimiter')
     line_ending: Optional[LineEndingEnum] = Field(alias='lineEnding')
-    job_type: Optional[JobTypeEnum] = Field(alias='jobType')
+    job_type: Optional[JobTypeEnum] = Field(alias='jobType', default=JobTypeEnum.Classic)
     total_processing_time: Optional[int] = Field(alias='totalProcessingTime')
     systemModstamp: Optional[datetime.datetime] = Field(alias='systemModstamp')
     content_url: Optional[str] = Field(alias='contentUrl')
+    query: Optional[str]
+
 
     @validator('operation')
     def external_id_field_name_required_for_upsert(cls, v, values, **kwargs):
         if v == 'upsert' and not values.get('external_id_field_name'):
             raise ValueError('External Id Field Name is required for upsert')
+        if not values.get('object') and v != 'query':
+            raise ValueError('Object must be specified')
         return v
 
     class Config:

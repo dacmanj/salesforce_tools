@@ -88,6 +88,17 @@ async = ["asgiref (>=3.2)"]
 dotenv = ["python-dotenv"]
 
 [[package]]
+name = "flatten-json"
+version = "0.1.13"
+description = "Flatten JSON objects"
+category = "main"
+optional = false
+python-versions = "*"
+
+[package.dependencies]
+six = "*"
+
+[[package]]
 name = "idna"
 version = "3.3"
 description = "Internationalized Domain Names in Applications (IDNA)"
@@ -444,7 +455,7 @@ python-versions = ">=3.4"
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.10"
-content-hash = "8fb3383d03573a4cecf8ec7e14f2b791ddf41282db1c86ddfa030b048d2fb18a"
+content-hash = "a171fbeb9258aa08942482521ee06a883c0437102701a6f4905255a72c74bfe6"
 
 [metadata.files]
 atomicwrites = [
@@ -477,6 +488,9 @@ faker = [
 flask = [
     {file = "Flask-2.2.1-py3-none-any.whl", hash = "sha256:3c604c48c3d5b4c63e72134044c0b4fe90ff01ef65280b9fe2d38c8860d99fe5"},
     {file = "Flask-2.2.1.tar.gz", hash = "sha256:9c2b81b9b1edcc835af72d600f1955e713a065e7cb41d7e51ee762b449d9c65d"},
+]
+flatten-json = [
+    {file = "flatten_json-0.1.13.tar.gz", hash = "sha256:ee352333e8293e957ccb1b4597a111fc4f6da88ab74b8cb3f8f51eed1e12f500"},
 ]
 idna = [
     {file = "idna-3.3-py3-none-any.whl", hash = "sha256:84d9dd047ffa80596e0f246e2eab0b391788b0503584e8945f2368256d2735ff"},

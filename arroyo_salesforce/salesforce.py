@@ -36,9 +36,9 @@ class SalesforceAPI(object):
         return self._force_dict_response(req)
 
     def _force_dict_response(self, resp):
-        if 'application/xml' in resp.headers['Content-Type']:
+        if 'application/xml' in resp.headers.get('Content-Type', ''):
             data = xmltodict.parse(resp.text)
-        elif 'application/json' in resp.headers['Content-Type']:
+        elif 'application/json' in resp.headers.get('Content-Type', ''):
             data = resp.json()
         else:
             data = resp.text
