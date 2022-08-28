@@ -16,7 +16,7 @@ REDIRECT_URI = 'http://localhost:8000/callback'
 
 
 def login(client_id: str = None, client_secret: str = None, token: dict = None,
-          token_updater: Callable = lambda x: True):
+          token_updater: Callable = lambda x: True, callback_port: int = 8000):
     salesforce = salesforce_compliance_fix(
         OAuth2Session(token=token,
                       client=SalesforceOAuthClient(client_id),
@@ -30,7 +30,7 @@ def login(client_id: str = None, client_secret: str = None, token: dict = None,
     if not token or not token.get('refresh_token'):
         authorization_url, state = salesforce.authorization_url(AUTH_URL)
         webbrowser.open(authorization_url, new=1)
-        authorization_response = CallbackServer().get_auth()
+        authorization_response = CallbackServer().get_auth(port=callback_port)
         ruri = urlsplit(REDIRECT_URI)
         ruri_base_url = ruri.scheme + '://' + ruri.netloc
         authorization_response = urljoin(ruri_base_url, authorization_response)

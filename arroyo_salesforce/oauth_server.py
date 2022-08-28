@@ -33,9 +33,9 @@ class OAuthCallbackHandler(BaseHTTPRequestHandler):
 
 
 class CallbackServer:
-    def get_auth(self):
+    def get_auth(self, port=8000):
         OAuthCallbackHandler.parent = self
-        httpd = HTTPServer(('localhost', 8000), OAuthCallbackHandler)
+        httpd = HTTPServer(('localhost', port), OAuthCallbackHandler)
         httpd.timeout = 30
         httpd.serve_forever()
         return self.path
