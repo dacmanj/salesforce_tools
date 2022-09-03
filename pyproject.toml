@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "arroyo.salesforce"
+name = "salesforce-tools"
 version = "0.1.0"
 description = ""
 authors = ["David Manuel <david@dcmanjr.com>"]
