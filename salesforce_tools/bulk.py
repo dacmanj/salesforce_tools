@@ -1,6 +1,5 @@
 import urllib.parse
-
-from salesforce import SalesforceAPI
+from salesforce_tools.salesforce import SalesforceAPI
 from enum import Enum
 from bulk_models import JobInfo, JobInfoList, BatchInfo, BatchInfoList, \
     OperationEnum, ContentTypeEnum, ContentTypeHeaderEnum, JobTypeEnum, JobStateEnum, BulkAPIError, APIError,\

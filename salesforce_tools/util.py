@@ -3,7 +3,11 @@ import re
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
 
-# Adapted from https://developer.salesforce.com/docs/marketing/marketing-cloud/guide/using_regular_expressions_to_validate_email_addresses.html
+
+"""
+Adapted from 
+https://developer.salesforce.com/docs/marketing/marketing-cloud/guide/using_regular_expressions_to_validate_email_addresses.html
+"""
 EMAIL_ADDRESS_REGEX = r"""^[a-z0-9!#$%&'*+\/=?^_`{|}~-]+(?:\.[a-z0-9!#$%&'*+\/=?^_`{|}~-]+)*@(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$"""
 
 

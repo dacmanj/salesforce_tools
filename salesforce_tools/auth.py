@@ -3,7 +3,7 @@ import json
 from oauthlib.common import to_unicode
 from datetime import datetime, timedelta
 import webbrowser
-from oauth_server import CallbackServer
+from salesforce_tools.oauth_server import CallbackServer
 from urllib.parse import urlsplit, urljoin
 import os
 from typing import Callable
