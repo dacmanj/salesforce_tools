@@ -1,12 +1,12 @@
-from arroyo_salesforce.auth import login
+from auth import login
 from urllib.parse import urljoin, urlencode
 import webbrowser
 import xmltodict
-from arroyo_salesforce.util import EMAIL_ADDRESS_REGEX
+from util import EMAIL_ADDRESS_REGEX
 from pydantic import Field, create_model, constr
 from typing import Optional, Literal
 from decimal import Decimal
-from arroyo_salesforce.util import SFDateTime
+from util import SFDateTime
 from datetime import date
 import re
 

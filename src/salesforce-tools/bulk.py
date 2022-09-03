@@ -1,8 +1,8 @@
 import urllib.parse
 
-from arroyo_salesforce.salesforce import SalesforceAPI
+from salesforce import SalesforceAPI
 from enum import Enum
-from arroyo_salesforce.bulk_models import JobInfo, JobInfoList, BatchInfo, BatchInfoList, \
+from bulk_models import JobInfo, JobInfoList, BatchInfo, BatchInfoList, \
     OperationEnum, ContentTypeEnum, ContentTypeHeaderEnum, JobTypeEnum, JobStateEnum, BulkAPIError, APIError,\
     BulkException
 from typing import Union, Optional, List
