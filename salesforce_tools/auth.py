@@ -16,18 +16,22 @@ REDIRECT_URI = 'http://localhost:8000/callback'
 
 
 def login(client_id: str = None, client_secret: str = None, token: dict = None,
-          token_updater: Callable = lambda x: True, callback_port: int = 8000):
+          token_updater: Callable = lambda x: True, callback_port: int = 8000,
+          force_login: bool = False, scope: str = 'refresh_token openid web full'):
     salesforce = salesforce_compliance_fix(
         OAuth2Session(token=token,
                       client=SalesforceOAuthClient(client_id),
                       redirect_uri=REDIRECT_URI,
-                      scope='refresh_token openid web full' if not token else None,
+                      scope=scope if not token else None,
                       auto_refresh_url=TOKEN_URL,
-                      auto_refresh_kwargs={'client_id': client_id, 'client_secret': client_secret},
+                      auto_refresh_kwargs={k:v for k,v in
+                                           {'client_id': client_id,
+                                            'client_secret': client_secret}.items()
+                                           if v},
                       token_updater=token_updater
                       )
     )
-    if not token or not token.get('refresh_token'):
+    if force_login or not token or not token.get('refresh_token'):
         authorization_url, state = salesforce.authorization_url(AUTH_URL)
         webbrowser.open(authorization_url, new=1)
         authorization_response = CallbackServer().get_auth(port=callback_port)
@@ -36,6 +40,8 @@ def login(client_id: str = None, client_secret: str = None, token: dict = None,
         authorization_response = urljoin(ruri_base_url, authorization_response)
         salesforce.fetch_token(TOKEN_URL, client_secret=client_secret,
                                authorization_response=authorization_response)
+        if token_updater:
+            token_updater(salesforce.token)
     return salesforce
 
 
