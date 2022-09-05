@@ -106,7 +106,7 @@ class JobInfo(BaseModel):
     def external_id_field_name_required_for_upsert(cls, v, values, **kwargs):
         if v == 'upsert' and not values.get('external_id_field_name'):
             raise ValueError('External Id Field Name is required for upsert')
-        if not values.get('object') and v != 'query':
+        if not values.get('sobject') and v != 'query':
             raise ValueError('Object must be specified')
         return v
 
