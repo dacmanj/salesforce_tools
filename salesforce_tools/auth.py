@@ -15,6 +15,7 @@ os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = "1"
 AUTH_URL = 'https://login.salesforce.com'
 AUTH_REL_URL = '/services/oauth2/authorize'
 TOKEN_REL_URL = '/services/oauth2/token'
+TOKEN_LIFE = timedelta(hours=2)
 
 
 def login(client_id: str = None, client_secret: str = None, token: dict = None,
@@ -72,9 +73,9 @@ def salesforce_compliance_fix(sess):
         token = json.loads(response.text)
         if token.get('issued_at'):
             iat = int(token["issued_at"]) / 1000
-            token["expires_in"] = (datetime.fromtimestamp(iat) + timedelta(hours=2) - datetime.now()).seconds
+            token["expires_in"] = (datetime.fromtimestamp(iat) + TOKEN_LIFE - datetime.now()).seconds
         else:
-            token["expires_in"] = 60 * 60 * 2 - 5
+            token["expires_in"] = TOKEN_LIFE.seconds
         fixed_token = json.dumps(token)
         response._content = to_unicode(fixed_token).encode("utf-8")
 
