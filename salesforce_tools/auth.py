@@ -33,14 +33,14 @@ def login(client_id: str = None, client_secret: str = None, token: dict = None,
                                      private_key=private_key
                                      )
         salesforce = salesforce_compliance_fix(
-            OAuth2Session(client=client, auto_refresh_url=token_url, token_updater=token_updater)
+            SalesforceOAuth2Session(client=client, auto_refresh_url=token_url, token_updater=token_updater)
         )
         salesforce.fetch_token(token_url)
         if token_updater:
             token_updater(salesforce.token)
     else:
         salesforce = salesforce_compliance_fix(
-            OAuth2Session(token=token,
+            SalesforceOAuth2Session(token=token,
                           client=SalesforceOAuthClient(client_id),
                           redirect_uri=redirect_url,
                           scope=scope if not token else None,
@@ -142,3 +142,14 @@ class SalesforceJWTClient(BackendApplicationClient):
 
         headers['X-SFDC-Session'] = self.token.get('access_token')
         return uri, headers, body
+
+
+class SalesforceOAuth2Session(OAuth2Session):
+    def __init__(self, instance_url=None, *args, **kwargs):
+        super(SalesforceOAuth2Session, self).__init__(*args, **kwargs)
+        self.instance_url = instance_url
+
+    def request(self, method, url, *args, **kwargs):
+        url = urljoin(self.instance_url, url)
+        return super(SalesforceOAuth2Session, self).request(method, url, *args, **kwargs)
+
