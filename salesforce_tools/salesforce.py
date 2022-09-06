@@ -14,7 +14,7 @@ class SalesforceAPI(object):
     session = None
     api_version = None
     api_root = None
-    instance_url = 'https://login.salesforce.com'
+    instance_url = None
     args = {}
 
     def __init__(self, api_version='54.0', **kwargs):
