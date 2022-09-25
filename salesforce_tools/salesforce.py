@@ -35,8 +35,15 @@ class SalesforceAPI(object):
         req = self.session.request(method, url, **kwargs)
         return self._force_dict_response(req)
 
-    def get(self, url, **kwargs):
-        return self.request(url, **kwargs)
+    def get(self, url, fetch_and_merge_records = False, **kwargs):
+        t = self.request(url, **kwargs)
+        next_records_url = t.get('nextRecordsUrl')
+        while fetch_and_merge_records and t[0].get('records') and next_records_url:
+            t2 = self.request(next_records_url)
+            next_records_url = t2[0].get('nextRecordsUrl')
+            t[0]['records'] = t[0]['records'] + t2[0]['records']
+
+        return t
 
     def post(self, url, **kwargs):
         return self.request(url, method='POST', **kwargs)
