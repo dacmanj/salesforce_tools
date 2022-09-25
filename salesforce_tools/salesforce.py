@@ -37,7 +37,7 @@ class SalesforceAPI(object):
 
     def get(self, url, auto_next=False, **kwargs):
         t = self.request(url, **kwargs)
-        next_records_url = t.get('nextRecordsUrl')
+        next_records_url = t[0].get('nextRecordsUrl')
         while auto_next and t[0].get('records') and next_records_url:
             t2 = self.request(next_records_url)
             next_records_url = t2[0].get('nextRecordsUrl')
