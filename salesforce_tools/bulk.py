@@ -8,7 +8,7 @@ from typing import Union, Optional, List
 from pydantic import BaseModel, ValidationError, parse_obj_as
 
 
-class SalesforceBulkJobException(Exception):
+class BulkJobException(Exception):
     pass
 
 
@@ -16,7 +16,7 @@ def get_enum_or_val(e):
     return e.value if isinstance(e, Enum) else e
 
 
-class SalesforceBulkAPI(SalesforceAPI):
+class BulkAPI(SalesforceAPI):
     job: Optional[Union[JobInfo, BulkAPIError]]
     batches: List[BatchInfo] = []
 

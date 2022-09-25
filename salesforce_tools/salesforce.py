@@ -77,7 +77,7 @@ class SalesforceModelFactory(object):
                 'url': str, 'currency': Decimal, 'reference': str, 'date': date, 'picklist': str, 'string': str,
                 'double': Decimal, 'phone': str, 'address': object}
 
-    def __init__(self, sd: SalesforceServicesData):
+    def __init__(self, sd: RestAPI):
         self.sd = sd
         self.type_map['address'] = self._make_address_model(self.address_md_template)
 

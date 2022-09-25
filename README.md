@@ -23,10 +23,10 @@ s.session.get("https://login.salesforce.com/services/oauth2/userinfo")
 s.open_sf()
 ```
 
-## SalesforceBulkAPI
+## BulkAPI
 ```
 from dotenv import load_dotenv, set_key
-from salesforce_tools import SalesforceBulkAPI, JobInfo, OperationEnum, ContentTypeEnum
+from salesforce_tools import BulkAPI, JobInfo, OperationEnum, ContentTypeEnum
 
 # 
 import pandas as pd
@@ -45,7 +45,7 @@ headers = csv_data.split("\n")[0].split(",")
 rows = csv_data.split("\n")[1::]
 json_data = [dict(zip(headers, r.split(','))) for r in rows]
 tk = json.loads(os.getenv('TOKEN', '{}'))
-s = SalesforceBulkAPI(client_id=cid, client_secret=sec, token=tk, token_updater=token_saver)
+s = BulkAPI(client_id=cid, client_secret=sec, token=tk, token_updater=token_saver)
 j_json = s.create_job(JobInfo(operation=OperationEnum.upsert,
                               object='Contact',
                               external_id_field_name='Email',
