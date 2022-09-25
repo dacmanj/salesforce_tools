@@ -24,7 +24,8 @@ class SalesforceAPI(object):
         self.args = kwargs
 
     def request(self, url, method='GET', api=None, **kwargs):
-        api = (api or self.api_root).format(api_version=self.api_version, version=self.api_version)
+        api = api or self.api_root
+        api = api.format(api_version=self.api_version, version=self.api_version) if api else api
         kwargs['headers'] = kwargs.get('headers', {'Content-Type': 'application/json',
                                                    'Accepts': 'application/json',
                                                    'charset': 'UTF-8'})
