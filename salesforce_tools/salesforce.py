@@ -68,7 +68,7 @@ class RestAPI(SalesforceAPI):
 
     def query(self, query):
         qs = urlencode({'q': query})
-        return self.get(self.get(f'query?{qs}'))
+        return self.get(f'query?{qs}')
 
 
 class ToolingAPI(SalesforceAPI):
@@ -76,7 +76,7 @@ class ToolingAPI(SalesforceAPI):
 
     def query(self, query):
         qs = urlencode({'q': query})
-        return self.get(self.get(f'query?{qs}'))
+        return self.get(f'query?{qs}')
 
 
 class SalesforceModelFactory(object):
