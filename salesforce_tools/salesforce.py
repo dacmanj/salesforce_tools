@@ -66,9 +66,17 @@ class RestAPI(SalesforceAPI):
     def get_record(self, sobject, sfid):
         return self.request(f'sobjects/{sobject}/{sfid}')
 
+    def query(self, query):
+        qs = urlencode({'q': query})
+        return self.get(self.get(f'query?{qs}'))
+
 
 class ToolingAPI(SalesforceAPI):
     api_root = '/services/data/v{api_version}/tooling/'
+
+    def query(self, query):
+        qs = urlencode({'q': query})
+        return self.get(self.get(f'query?{qs}'))
 
 
 class SalesforceModelFactory(object):
