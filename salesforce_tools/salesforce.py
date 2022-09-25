@@ -56,7 +56,7 @@ class SalesforceAPI(object):
         webbrowser.open(url)
 
 
-class SalesforceServicesData(SalesforceAPI):
+class RestAPI(SalesforceAPI):
     api_root = '/services/data/v{api_version}/'
 
     def get_metadata(self, sobject):
@@ -64,6 +64,10 @@ class SalesforceServicesData(SalesforceAPI):
 
     def get_record(self, sobject, sfid):
         return self.request(f'sobjects/{sobject}/{sfid}')
+
+
+class ToolingAPI(SalesforceAPI):
+    api_root = '/services/data/v{api_version}/tooling/'
 
 
 class SalesforceModelFactory(object):
