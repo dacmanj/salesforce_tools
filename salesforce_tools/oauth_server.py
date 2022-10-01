@@ -43,4 +43,3 @@ class CallbackServer:
 
 if __name__ == "__main__":
     cs = CallbackServer()
-    print(cs.get_auth())
