@@ -31,6 +31,9 @@ class OAuthCallbackHandler(BaseHTTPRequestHandler):
 
         threading.Thread(target=self.server.shutdown).start()
 
+    def log_message(self, format, *args):
+        pass
+
 
 class CallbackServer:
     def get_auth(self, port=8000):
