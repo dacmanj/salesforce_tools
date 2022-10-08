@@ -14,7 +14,7 @@ def token_saver(s):
     set_key('.env', 'TOKEN', json.dumps(s))
 
 # jwt
-# s = SalesforceAPI(client_id=cid, private_key_filename='cert/serverkey.pem', token_updater=token_saver)
+# s = SalesforceAPI(client_id=cid, username='test@test.com', audience='https://test.salesforce.com', private_key_filename='cert/serverkey.pem', token_updater=token_saver)
 # refresh_token
 tk = json.loads(os.getenv('TOKEN', '{}'))
 s = SalesforceAPI(client_id=cid, client_secret=sec, token=tk, token_updater=token_saver)

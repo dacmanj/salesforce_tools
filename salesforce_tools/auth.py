@@ -22,16 +22,13 @@ def login(client_id: str = None, client_secret: str = None, token: dict = None,
           token_updater: Callable = lambda x: True, callback_port: int = 8000,
           force_login: bool = False, scope: str = 'refresh_token openid web full',
           auth_url: str = AUTH_URL, redirect_url: str = None, private_key: str = None,
-          private_key_filename: str = None):
+          private_key_filename: str = None, username: str = None):
     auth_code_url = urljoin(auth_url, AUTH_REL_URL)
     token_url = urljoin(auth_code_url, TOKEN_REL_URL)
     redirect_url = redirect_url or f"http://localhost:{callback_port}/callback"
     if private_key or private_key_filename:
-        client = SalesforceJWTClient(client_id,
-                                     auth_url,
-                                     private_key_filename=private_key_filename,
-                                     private_key=private_key
-                                     )
+        client = SalesforceJWTClient(client_id, username=username, auth_url=auth_url,
+                                     private_key_filename=private_key_filename, private_key=private_key)
         salesforce = salesforce_compliance_fix(
             SalesforceOAuth2Session(client=client, auto_refresh_url=token_url, token_updater=token_updater)
         )
@@ -105,14 +102,15 @@ class SalesforceOAuthClient(WebApplicationClient):
 class SalesforceJWTClient(BackendApplicationClient):
     grant_type = 'urn:ietf:params:oauth:grant-type:jwt-bearer'
 
-    def __init__(self, client_id,
-                 audience: str = None,
+    def __init__(self, client_id: str, username: str,
+                 auth_url: str = 'https://test.salesforce.com',
                  private_key_filename: str = None,
                  private_key: str = None,
                  **kwargs):
         super().__init__(client_id, **kwargs)
-        self.audience = audience
+        self.audience = auth_url
         self.private_key = private_key
+        self.user_name = username
         if private_key_filename:
             with open(private_key_filename, mode='r') as f:
                 self.private_key = ''.join(f.readlines())
@@ -122,7 +120,7 @@ class SalesforceJWTClient(BackendApplicationClient):
 
     def prepare_request_body(self, body: str = '', **kwargs):
         claims = {"iss": self.client_id,
-                  "sub": "arroyo2207@fionta.com",
+                  "sub": self.user_name,
                   "aud": self.audience,
                   "exp": int(datetime.now().timestamp()) + 60 * 3
                   }
