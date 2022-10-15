@@ -18,7 +18,7 @@ TOKEN_REL_URL = '/services/oauth2/token'
 TOKEN_LIFE = timedelta(hours=2)
 
 
-def login(client_id: str = None, client_secret: str = None, token: dict = None,
+def login(client_id: str = None, client_secret: str = None, token: dict = {},
           token_updater: Callable = lambda x: True, callback_port: int = 8000,
           force_login: bool = False, scope: str = 'refresh_token openid web full',
           auth_url: str = AUTH_URL, redirect_url: str = None, private_key: str = None,
@@ -75,7 +75,6 @@ def salesforce_compliance_fix(sess):
             token["expires_in"] = TOKEN_LIFE.seconds
         fixed_token = json.dumps(token)
         response._content = to_unicode(fixed_token).encode("utf-8")
-
         return response
 
     sess.register_compliance_hook("access_token_response", _compliance_fix)

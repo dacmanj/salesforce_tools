@@ -20,7 +20,7 @@ class OAuthCallbackHandler(BaseHTTPRequestHandler):
             http_body = f"""<html>
                <h1 style="font-size: large">{emoji}</h1>
                <p>Congratulations! Your authentication succeeded.</p>"""
-            auth_code = args["code"]
+            auth_code = args.get("code")
             self.parent.auth_code = auth_code[0]
             self.parent.path = self.path
         self.send_response(http_status)
