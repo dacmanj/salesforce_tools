@@ -147,9 +147,13 @@ class SalesforceOAuth2Session(OAuth2Session):
     def __init__(self, instance_url=None, api_root=None, *args, **kwargs):
         super(SalesforceOAuth2Session, self).__init__(*args, **kwargs)
         self.instance_url = instance_url
+        if not self.instance_url and self.token and self.token.get('instance_url'):
+            self.instance_url = self.token.get('instance_url')
         self.api_root = api_root
 
     def request(self, method, url, *args, **kwargs):
+        if not self.instance_url and self.token and self.token.get('instance_url'):
+            self.instance_url = self.token.get('instance_url')
         base_url = ''.join(filter(None, [self.instance_url, self.api_root]))
         url = urljoin(base_url, url)
         return super(SalesforceOAuth2Session, self).request(method, url, *args, **kwargs)

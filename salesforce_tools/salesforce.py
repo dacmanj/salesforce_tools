@@ -20,10 +20,10 @@ class SalesforceAPI(object):
     def __init__(self, api_version=None, api_root=None, **kwargs):
         self.api_version = api_version if api_version else '55.0'
         self.api_root = api_root.format(api_version=self.api_version, version=self.api_version) if api_root else None
+        self.args = kwargs
         self.session = login(**kwargs)
         self.session.api_root = self.api_root
-        self.instance_url = self.session.token.get('instance_url')
-        self.args = kwargs
+        self.instance_url = self.session.instance_url
 
     def request(self, url, method='GET', **kwargs):
         kwargs['headers'] = kwargs.get('headers', {'Content-Type': 'application/json',
