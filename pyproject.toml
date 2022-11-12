@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "salesforce-tools"
-version = "0.1.22"
+version = "0.1.23"
 description = "Salesforce API tools"
 authors = ["David Manuel <david@dcmanjr.com>"]
 license = "MIT"
