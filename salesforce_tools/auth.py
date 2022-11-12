@@ -24,7 +24,7 @@ def login(client_id: str = None, client_secret: str = None, token: dict = {},
           auth_url: str = AUTH_URL, redirect_url: str = None, private_key: str = None,
           private_key_filename: str = None, username: str = None):
     auth_code_url = urljoin(auth_url, AUTH_REL_URL)
-    token_url = urljoin(auth_code_url, TOKEN_REL_URL)
+    token_url = urljoin(auth_url, TOKEN_REL_URL)
     redirect_url = redirect_url or f"http://localhost:{callback_port}/callback"
     if private_key or private_key_filename:
         client = SalesforceJWTClient(client_id, username=username, auth_url=auth_url,
@@ -67,7 +67,7 @@ def salesforce_compliance_fix(sess):
     token = ''
 
     def _compliance_fix(response):
-        token = json.loads(response.text)
+        token = response.json()
         if token.get('issued_at'):
             iat = int(token["issued_at"]) / 1000
             token["expires_in"] = (datetime.fromtimestamp(iat) + TOKEN_LIFE - datetime.now()).seconds
@@ -75,6 +75,8 @@ def salesforce_compliance_fix(sess):
             token["expires_in"] = TOKEN_LIFE.seconds
         fixed_token = json.dumps(token)
         response._content = to_unicode(fixed_token).encode("utf-8")
+        if token.get('instance_url'):
+            sess.instance_url = token.get('instance_url')
         return response
 
     sess.register_compliance_hook("access_token_response", _compliance_fix)
@@ -142,11 +144,13 @@ class SalesforceJWTClient(BackendApplicationClient):
 
 
 class SalesforceOAuth2Session(OAuth2Session):
-    def __init__(self, instance_url=None, *args, **kwargs):
+    def __init__(self, instance_url=None, api_root=None, *args, **kwargs):
         super(SalesforceOAuth2Session, self).__init__(*args, **kwargs)
         self.instance_url = instance_url
+        self.api_root = api_root
 
     def request(self, method, url, *args, **kwargs):
-        url = urljoin(self.instance_url, url)
+        base_url = ''.join(filter(None, [self.instance_url, self.api_root]))
+        url = urljoin(base_url, url)
         return super(SalesforceOAuth2Session, self).request(method, url, *args, **kwargs)
 

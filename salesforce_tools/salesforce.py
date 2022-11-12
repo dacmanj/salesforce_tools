@@ -17,21 +17,18 @@ class SalesforceAPI(object):
     instance_url = None
     args = {}
 
-    def __init__(self, api_version='54.0', **kwargs):
+    def __init__(self, api_version=None, api_root=None, **kwargs):
+        self.api_version = api_version if api_version else '55.0'
+        self.api_root = api_root.format(api_version=self.api_version, version=self.api_version) if api_root else None
         self.session = login(**kwargs)
+        self.session.api_root = self.api_root
         self.instance_url = self.session.token.get('instance_url')
-        self.api_version = api_version
         self.args = kwargs
 
-    def request(self, url, method='GET', api=None, **kwargs):
-        api = api or self.api_root
-        api = api.format(api_version=self.api_version, version=self.api_version) if api else api
+    def request(self, url, method='GET', **kwargs):
         kwargs['headers'] = kwargs.get('headers', {'Content-Type': 'application/json',
                                                    'Accepts': 'application/json',
                                                    'charset': 'UTF-8'})
-
-        base_url = urljoin(self.instance_url, api) if api else self.instance_url
-        url = urljoin(base_url, url)
         req = self.session.request(method, url, **kwargs)
         return self._force_dict_response(req)
 
@@ -68,7 +65,8 @@ class SalesforceAPI(object):
 
 
 class RestAPI(SalesforceAPI):
-    api_root = '/services/data/v{api_version}/'
+    def __init__(self, **kwargs):
+        super().__init__(api_root='/services/data/v{api_version}/', **kwargs)
 
     def get_metadata(self, sobject):
         return self.request(f'sobjects/{sobject}/describe/')
@@ -82,7 +80,8 @@ class RestAPI(SalesforceAPI):
 
 
 class ToolingAPI(SalesforceAPI):
-    api_root = '/services/data/v{api_version}/tooling/'
+    def __init__(self, **kwargs):
+        super().__init__(api_root='/services/data/v{api_version}/tooling/', **kwargs)
 
     def query(self, query, **kwargs):
         qs = urlencode({'q': query})

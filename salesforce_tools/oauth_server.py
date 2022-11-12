@@ -20,9 +20,10 @@ class OAuthCallbackHandler(BaseHTTPRequestHandler):
             http_body = f"""<html>
                <h1 style="font-size: large">{emoji}</h1>
                <p>Congratulations! Your authentication succeeded.</p>"""
-            auth_code = args.get("code")
-            self.parent.auth_code = auth_code[0]
-            self.parent.path = self.path
+            if not hasattr(self.parent, "path"):
+                auth_code = args.get("code")
+                self.parent.auth_code = auth_code[0]
+                self.parent.path = self.path
         self.send_response(http_status)
         self.send_header("Content-Type", "text/html; charset=utf-8")
 
@@ -31,7 +32,7 @@ class OAuthCallbackHandler(BaseHTTPRequestHandler):
 
         threading.Thread(target=self.server.shutdown).start()
 
-    def log_message(self, format, *args):
+    def log_message(self, fmt, *args):
         pass
 
 
