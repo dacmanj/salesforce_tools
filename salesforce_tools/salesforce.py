@@ -12,18 +12,21 @@ import re
 
 class SalesforceAPI(object):
     session = None
-    api_version = None
     api_root = None
     instance_url = None
     args = {}
 
     def __init__(self, api_version=None, api_root=None, **kwargs):
-        self.api_version = api_version if api_version else '55.0'
-        self.api_root = api_root.format(api_version=self.api_version, version=self.api_version) if api_root else None
         self.args = kwargs
+        self.args['api_version'] = api_version
+        self.api_root = api_root.format(api_version=self.api_version, version=self.api_version) if api_root else None
         self.session = login(**kwargs)
         self.session.api_root = self.api_root
         self.instance_url = self.session.instance_url
+
+    @property
+    def api_version(self):
+        return self.args.get('api_version') or '56.0'
 
     def request(self, url, method='GET', **kwargs):
         kwargs['headers'] = kwargs.get('headers', {'Content-Type': 'application/json',

@@ -22,7 +22,7 @@ def login(client_id: str = None, client_secret: str = None, token: dict = {},
           token_updater: Callable = lambda x: True, callback_port: int = 8000,
           force_login: bool = False, scope: str = 'refresh_token openid web full',
           auth_url: str = AUTH_URL, redirect_url: str = None, private_key: str = None,
-          private_key_filename: str = None, username: str = None):
+          private_key_filename: str = None, username: str = None, **kwargs):
     auth_code_url = urljoin(auth_url, AUTH_REL_URL)
     token_url = urljoin(auth_url, TOKEN_REL_URL)
     redirect_url = redirect_url or f"http://localhost:{callback_port}/callback"
