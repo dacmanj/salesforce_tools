@@ -10,6 +10,8 @@ from urllib.parse import urlsplit, urljoin
 import os
 from typing import Callable
 import jwt
+from urllib.parse import urlparse
+
 
 os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = "1"
 AUTH_URL = 'https://login.salesforce.com'
@@ -141,6 +143,25 @@ class SalesforceJWTClient(BackendApplicationClient):
 
         headers['X-SFDC-Session'] = self.token.get('access_token')
         return uri, headers, body
+
+
+def sfdx_auth_url_to_dict(url):
+    p_url = urlparse(url)
+    if p_url.scheme == 'force':
+        i_url = f"https://{p_url.hostname}"
+        return {
+            "client_id": p_url.username,
+            "client_secret": p_url.password.split(':')[0],
+            "token": {
+                "refresh_token": p_url.password.split(':')[1],
+                "instance_url": i_url,
+                "access_token": 'REFRESH_ME',
+                "expires_at": int(datetime.now().timestamp())
+
+            },
+            "auth_url": i_url
+
+        }
 
 
 class SalesforceOAuth2Session(OAuth2Session):
