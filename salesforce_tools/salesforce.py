@@ -48,8 +48,11 @@ class SalesforceAPI(object):
 
         return t
 
-    def __getattr__(self, name, *args, **kwargs):
-        return self.request(*args, method=name.upper(), *args, **kwargs)
+    def __getattr__(self, name):
+        def wrapper(*args, **kwargs):
+            kwargs['method'] = name.upper()
+            return self.request(*args, **kwargs)
+        return wrapper
 
     def _force_dict_response(self, resp):
         if 'application/xml' in resp.headers.get('Content-Type', ''):
