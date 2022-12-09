@@ -1,5 +1,4 @@
 import asyncio
-import tqdm
 from salesforce_tools.async_sf.client import SalesforceAsyncOAuth2Client
 
 
