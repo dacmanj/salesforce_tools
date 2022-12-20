@@ -31,7 +31,7 @@ tests-no-zope = ["cloudpickle", "coverage[toml] (>=5.0.2)", "hypothesis", "mypy 
 
 [[package]]
 name = "authlib"
-version = "1.1.0"
+version = "1.2.0"
 description = "The ultimate Python library in building OAuth and OpenID Connect servers and clients."
 category = "main"
 optional = false
@@ -42,7 +42,7 @@ cryptography = ">=3.2"
 
 [[package]]
 name = "certifi"
-version = "2022.9.24"
+version = "2022.12.7"
 description = "Python package for providing Mozilla's CA Bundle."
 category = "main"
 optional = false
@@ -299,14 +299,11 @@ python-versions = ">=3.6"
 
 [[package]]
 name = "packaging"
-version = "21.3"
+version = "22.0"
 description = "Core utilities for Python packages"
 category = "dev"
 optional = false
-python-versions = ">=3.6"
-
-[package.dependencies]
-pyparsing = ">=2.0.2,<3.0.5 || >3.0.5"
+python-versions = ">=3.7"
 
 [[package]]
 name = "pandas"
@@ -378,17 +375,6 @@ docs = ["sphinx (>=4.5.0,<5.0.0)", "sphinx-rtd-theme", "zope.interface"]
 tests = ["coverage[toml] (==5.0.4)", "pytest (>=6.0.0,<7.0.0)"]
 
 [[package]]
-name = "pyparsing"
-version = "3.0.9"
-description = "pyparsing module - Classes and methods to define and execute parsing grammars"
-category = "dev"
-optional = false
-python-versions = ">=3.6.8"
-
-[package.extras]
-diagrams = ["jinja2", "railroad-diagrams"]
-
-[[package]]
 name = "pytest"
 version = "7.2.0"
 description = "pytest: simple powerful testing with Python"
@@ -457,7 +443,7 @@ cli = ["click (>=5.0)"]
 
 [[package]]
 name = "pytz"
-version = "2022.6"
+version = "2022.7"
 description = "World timezone definitions, modern and historical"
 category = "main"
 optional = false
@@ -630,7 +616,7 @@ testing = ["flake8 (<5)", "func-timeout", "jaraco.functools", "jaraco.itertools"
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.8"
-content-hash = "0771c419b41128f98ca9a3a1e8fd6be5f662532a20177da2becc76c486d81cdc"
+content-hash = "47df1bf24d99c501a50024fe7beaadcc22e5cdd6866eec5eae930e43a11fd22a"
 
 [metadata.files]
 anyio = [
@@ -642,12 +628,12 @@ attrs = [
     {file = "attrs-22.1.0.tar.gz", hash = "sha256:29adc2665447e5191d0e7c568fde78b21f9672d344281d0c6e1ab085429b22b6"},
 ]
 authlib = [
-    {file = "Authlib-1.1.0-py2.py3-none-any.whl", hash = "sha256:be4b6a1dea51122336c210a6945b27a105b9ac572baffd15b07bcff4376c1523"},
-    {file = "Authlib-1.1.0.tar.gz", hash = "sha256:0a270c91409fc2b7b0fbee6996e09f2ee3187358762111a9a4225c874b94e891"},
+    {file = "Authlib-1.2.0-py2.py3-none-any.whl", hash = "sha256:4ddf4fd6cfa75c9a460b361d4bd9dac71ffda0be879dbe4292a02e92349ad55a"},
+    {file = "Authlib-1.2.0.tar.gz", hash = "sha256:4fa3e80883a5915ef9f5bc28630564bc4ed5b5af39812a3ff130ec76bd631e9d"},
 ]
 certifi = [
-    {file = "certifi-2022.9.24-py3-none-any.whl", hash = "sha256:90c1a32f1d68f940488354e36370f6cca89f0f106db09518524c88d6ed83f382"},
-    {file = "certifi-2022.9.24.tar.gz", hash = "sha256:0d9c601124e5a6ba9712dbc60d9c53c21e34f5f641fe83002317394311bdce14"},
+    {file = "certifi-2022.12.7-py3-none-any.whl", hash = "sha256:4ad3232f5e926d6718ec31cfc1fcadfde020920e278684144551c91769c7bc18"},
+    {file = "certifi-2022.12.7.tar.gz", hash = "sha256:35824b4c3a97115964b408844d64aa14db1cc518f6562e8d7261699d1350a9e3"},
 ]
 cffi = [
     {file = "cffi-1.15.1-cp27-cp27m-macosx_10_9_x86_64.whl", hash = "sha256:a66d3508133af6e8548451b25058d5812812ec3798c886bf38ed24a98216fab2"},
@@ -879,8 +865,8 @@ objprint = [
     {file = "objprint-0.2.2.tar.gz", hash = "sha256:90f2f3c19dfda1b5eb50d87d82ccbc20511ca4f02c4878553c56edc711e39689"},
 ]
 packaging = [
-    {file = "packaging-21.3-py3-none-any.whl", hash = "sha256:ef103e05f519cdc783ae24ea4e2e0f508a9c99b2d4969652eed6a2e1ea5bd522"},
-    {file = "packaging-21.3.tar.gz", hash = "sha256:dd47c42927d89ab911e606518907cc2d3a1f38bbd026385970643f9c5b8ecfeb"},
+    {file = "packaging-22.0-py3-none-any.whl", hash = "sha256:957e2148ba0e1a3b282772e791ef1d8083648bc131c8ab0c1feba110ce1146c3"},
+    {file = "packaging-22.0.tar.gz", hash = "sha256:2198ec20bd4c017b8f9717e00f0c8714076fc2fd93816750ab48e2c41de2cfd3"},
 ]
 pandas = [
     {file = "pandas-1.5.2-cp310-cp310-macosx_10_9_universal2.whl", hash = "sha256:e9dbacd22555c2d47f262ef96bb4e30880e5956169741400af8b306bbb24a273"},
@@ -961,10 +947,6 @@ pyjwt = [
     {file = "PyJWT-2.6.0-py3-none-any.whl", hash = "sha256:d83c3d892a77bbb74d3e1a2cfa90afaadb60945205d1095d9221f04466f64c14"},
     {file = "PyJWT-2.6.0.tar.gz", hash = "sha256:69285c7e31fc44f68a1feb309e948e0df53259d579295e6cfe2b1792329f05fd"},
 ]
-pyparsing = [
-    {file = "pyparsing-3.0.9-py3-none-any.whl", hash = "sha256:5026bae9a10eeaefb61dab2f09052b9f4307d44aee4eda64b309723d8d206bbc"},
-    {file = "pyparsing-3.0.9.tar.gz", hash = "sha256:2b020ecf7d21b687f219b71ecad3631f644a47f01403fa1d1036b0c6416d70fb"},
-]
 pytest = [
     {file = "pytest-7.2.0-py3-none-any.whl", hash = "sha256:892f933d339f068883b6fd5a459f03d85bfcb355e4981e146d2c7616c21fef71"},
     {file = "pytest-7.2.0.tar.gz", hash = "sha256:c4014eb40e10f11f355ad4e3c2fb2c6c6d1919c73f3b5a433de4708202cade59"},
@@ -985,8 +967,8 @@ python-dotenv = [
     {file = "python_dotenv-0.20.0-py3-none-any.whl", hash = "sha256:d92a187be61fe482e4fd675b6d52200e7be63a12b724abbf931a40ce4fa92938"},
 ]
 pytz = [
-    {file = "pytz-2022.6-py2.py3-none-any.whl", hash = "sha256:222439474e9c98fced559f1709d89e6c9cbf8d79c794ff3eb9f8800064291427"},
-    {file = "pytz-2022.6.tar.gz", hash = "sha256:e89512406b793ca39f5971bc999cc538ce125c0e51c27941bef4568b460095e2"},
+    {file = "pytz-2022.7-py2.py3-none-any.whl", hash = "sha256:93007def75ae22f7cd991c84e02d434876818661f8df9ad5df9e950ff4e52cfd"},
+    {file = "pytz-2022.7.tar.gz", hash = "sha256:7ccfae7b4b2c067464a6733c6261673fdb8fd1be905460396b97a073e9fa683a"},
 ]
 requests = [
     {file = "requests-2.28.1-py3-none-any.whl", hash = "sha256:8fefa2a1a1365bf5520aac41836fbee479da67864514bdb821f31ce07ce65349"},
