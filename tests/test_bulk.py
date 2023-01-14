@@ -1,6 +1,6 @@
 import pytest
-from arroyo_salesforce.bulk import SalesforceBulkAPI
-from arroyo_salesforce.auth import TOKEN_URL
+from salesforce_tools.bulk import SalesforceAPI
+from salesforce_tools.auth import TOKEN_REL_URL
 from mock_responses import mock_response, API_VERSION
 
 
@@ -22,12 +22,12 @@ def mock_auth(func):
     def inner(monkeypatch, requests_mock, *args, **kwargs):
         state = '12345'
         auth_code_redirect_url = f"/callback?code=aPrxT9Lzoezd_72OG18vycl0gdfPS8jLc.IfY2H8ana14w0GZuKFcMApsIf6xyjAm3HbskSaHQ%3D%3D&state={state}"
-        requests_mock.post(TOKEN_URL,
+        requests_mock.post(TOKEN_REL_URL,
                            text=mock_response('id_token'),
                            status_code=200)
         monkeypatch.setattr("webbrowser.open", lambda url, new: True, raising=True)
-        monkeypatch.setattr("arroyo_salesforce.auth.OAuth2Session.new_state", lambda x: state, raising=True)
-        monkeypatch.setattr("arroyo_salesforce.auth.CallbackServer.get_auth", lambda x: auth_code_redirect_url, raising=True)
+        monkeypatch.setattr("salesforce_tools.auth.OAuth2Session.new_state", lambda x: state, raising=True)
+        monkeypatch.setattr("salesforce_tools.auth.CallbackServer.get_auth", lambda x: auth_code_redirect_url, raising=True)
         return func(monkeypatch, requests_mock, *args, **kwargs)
     return inner
 
