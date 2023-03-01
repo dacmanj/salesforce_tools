@@ -25,8 +25,21 @@ class SalesforceAsyncOAuth2Client(AsyncOAuth2Client):
         self.register_compliance_hook('access_token_response', self._fix_token_response)
         self.register_compliance_hook('refresh_token_response', self._fix_token_response)
 
-    def query(self, qry):
-        return self.get(f'query?q={quote(qry)}')
+    async def query(self, qry, auto=False):
+        if auto:
+            results, done, url = [], None, None
+
+            while not done:
+                if not url:
+                    qr = (await self.get(f'query?q={quote(qry)}')).json()
+                else:
+                    qr = (await self.get(url, timeout=30)).json()
+                done = qr['done']
+                url = f"query/{qr.get('nextRecordsUrl', 'query/').split('query/')[1]}"
+                results.extend(qr['records'])
+        else:
+            return await self.get(f'query?q={quote(qry)}')
+        return results
 
     def _fix_token_response(self, resp):
         data = resp.json()
@@ -42,6 +55,10 @@ class SalesforceSfdxAsyncOAuth2Client(SalesforceAsyncOAuth2Client):
         kwargs.update(sfdx_auth_url_to_dict(sfdx_auth_url['result']['sfdxAuthUrl']))
         kwargs['token']['access_token'] = sfdx_auth_url['result']['accessToken']
         super().__init__(**kwargs)
+
+
+class SalesforceAPISelectorException(Exception):
+    pass
 
 
 class SalesforceAPISelector():
@@ -62,7 +79,10 @@ class SalesforceAPISelector():
         return (await self.userinfo).get('urls')
 
     async def __getattr__(self, item):
-        base_url = (await self.userinfo).get('urls').get(item+'_rest').replace('{version}', self.api_version)
-        args = self.sf.args
-        args['base_url'] = base_url
-        return SalesforceAsyncOAuth2Client(**args)
+        try:
+            base_url = (await self.userinfo).get('urls').get(item+'_rest').replace('{version}', self.api_version)
+            args = self.sf.args
+            args['base_url'] = base_url
+            return SalesforceAsyncOAuth2Client(**args)
+        except AttributeError:
+            raise SalesforceAPISelectorException('API Not Found')
