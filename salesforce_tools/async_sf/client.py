@@ -62,6 +62,10 @@ class SalesforceAPISelectorException(Exception):
 
 
 class SalesforceAPISelector():
+    ALIASES = {
+        'tooling': 'tooling_rest'
+    }
+
     def __init__(self, *args, **kwargs):
         self.sf = SalesforceAsyncOAuth2Client(**kwargs)
         self._oauth_user_info_url = f"{self.sf.instance_url}/services/oauth2/userinfo"
@@ -80,7 +84,8 @@ class SalesforceAPISelector():
 
     async def __getattr__(self, item):
         try:
-            base_url = (await self.userinfo).get('urls').get(item+'_rest').replace('{version}', self.api_version)
+            item = SalesforceAPISelector.ALIASES[item] if item in SalesforceAPISelector.ALIASES.keys() else item
+            base_url = (await self.userinfo).get('urls').get(item).replace('{version}', self.api_version)
             args = self.sf.args
             args['base_url'] = base_url
             return SalesforceAsyncOAuth2Client(**args)
