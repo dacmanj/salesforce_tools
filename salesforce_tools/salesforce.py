@@ -3,7 +3,7 @@ from urllib.parse import urljoin, urlencode
 import webbrowser
 import xmltodict
 from salesforce_tools.util import SFDateTime, EMAIL_ADDRESS_REGEX
-from pydantic import Field, create_model, constr
+from pydantic.v1 import Field, create_model, constr
 from typing import Optional, Literal
 from decimal import Decimal
 from datetime import date

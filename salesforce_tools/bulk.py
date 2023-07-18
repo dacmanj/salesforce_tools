@@ -5,7 +5,7 @@ from salesforce_tools.bulk_models import JobInfo, JobInfoList, BatchInfo, BatchI
     OperationEnum, ContentTypeEnum, ContentTypeHeaderEnum, JobTypeEnum, JobStateEnum, BulkAPIError, APIError,\
     BulkException
 from typing import Union, Optional, List
-from pydantic import BaseModel, ValidationError, parse_obj_as
+from pydantic.v1 import BaseModel, ValidationError, parse_obj_as
 
 
 class BulkJobException(Exception):
