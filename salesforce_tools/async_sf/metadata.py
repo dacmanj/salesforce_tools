@@ -11,9 +11,9 @@ class SalesforceMetadataFetcherAsync:
         if self.cache_file:
             self.load_cache(self.cache_file)
 
-    async def get_sobject_describe(self, obj, cache=True):
+    async def get_sobject_describe(self, obj, cache=True, timeout=30):
         if not cache or not self._cache_sobject.get(obj):
-            self._cache_sobject[obj] = (await self.client.get(f'sobjects/{obj}/describe', timeout=10.0)).json()
+            self._cache_sobject[obj] = (await self.client.get(f'sobjects/{obj}/describe', timeout=timeout)).json()
         return self._cache_sobject.get(obj)
 
     async def get_picklist_values(self, obj, field):
@@ -33,9 +33,9 @@ class SalesforceMetadataFetcherAsync:
             return permissionable_fields
         return pv
 
-    async def get_all_sobjects(self, cache=True):
+    async def get_all_sobjects(self, cache=True, timeout=30.0):
         if not cache or not self._cache_sobjects_list:
-            self._cache_sobjects_list = (await self.client.get("sobjects", timeout=10.0)).json()['sobjects']
+            self._cache_sobjects_list = (await self.client.get("sobjects", timeout=timeout)).json()['sobjects']
         return self._cache_sobjects_list
 
     async def get_all_sobject_request_coroutines(self, unfiltered=True, cache=True):
