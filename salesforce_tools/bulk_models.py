@@ -10,6 +10,7 @@ class JobStateEnum(str, Enum):
     Aborted = 'Aborted'
     Failed = 'Failed'
     UploadComplete = 'UploadComplete'
+    JobComplete = 'JobComplete'
 
 
 class ContentTypeEnum(str, Enum):
@@ -58,6 +59,7 @@ class LineEndingEnum(str, Enum):
 
 class JobTypeEnum(str, Enum):
     V2Ingest = "V2Ingest"
+    V2Query = "V2Query"
     Classic = "Classic"
     BigObjectIngest = "BigObjectIngest"
 
