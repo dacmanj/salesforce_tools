@@ -1,5 +1,5 @@
-from pydantic.v1 import BaseModel, ValidationError, validator, Field
-from typing import Literal, Optional, List
+from pydantic import BaseModel, ValidationError, validator, Field, ConfigDict
+from typing import List
 from enum import Enum
 import datetime
 
@@ -9,6 +9,7 @@ class JobStateEnum(str, Enum):
     Closed = 'Closed'
     Aborted = 'Aborted'
     Failed = 'Failed'
+    InProgress = 'InProgress'
     UploadComplete = 'UploadComplete'
     JobComplete = 'JobComplete'
 
@@ -73,37 +74,38 @@ class BatchStateEnum(str, Enum):
 
 
 class JobInfo(BaseModel):
-    api_version: Optional[float] = Field(alias='apiVersion')
-    apex_processing_time: Optional[int] = Field(alias='apexProcessingTime')
-    api_active_processing_time: Optional[int] = Field(alias='apiActiveProcessingTime')
-    assignment_rule_id: Optional[str] = Field(alias='assignmentRuleId')
-    concurrency_mode: Optional[ConcurrencyModeEnum] = Field(alias='concurrencyMode')
+    api_version: float = Field(alias='apiVersion', default=None)
+    apex_processing_time: int = Field(alias='apexProcessingTime', default=None)
+    api_active_processing_time: int = Field(alias='apiActiveProcessingTime', default=None)
+    assignment_rule_id: str = Field(alias='assignmentRuleId', default=None)
+    concurrency_mode: ConcurrencyModeEnum = Field(alias='concurrencyMode', default=None)
     content_type: ContentTypeEnum = Field(alias='contentType', default=ContentTypeEnum.CSV)
-    created_by_id: Optional[str] = Field(alias='createdById')
-    created_date: Optional[datetime.datetime] = Field(alias='createdDate')
-    external_id_field_name: Optional[str] = Field(alias='externalIdFieldName')
-    id: Optional[str]
-    number_batches_completed: Optional[int] = Field(alias='numberBatchesCompleted')
-    number_batches_queued: Optional[int] = Field(alias='numberBatchesQueued')
-    number_batches_failed: Optional[int] = Field(alias='numberBatchesFailed')
-    number_batches_in_progress: Optional[int] = Field(alias='numberBatchesInProgress')
-    number_batches_total: Optional[int] = Field(alias='numberBatchesTotal')
-    number_records_failed: Optional[int] = Field(alias='numberRecordsFailed')
-    number_records_processed: Optional[int] = Field(alias='numberRecordsProcessed')
-    number_retries: Optional[int] = Field(alias='numberRetries')
-    sobject: Optional[str] = Field(alias='object')
+    created_by_id: str = Field(alias='createdById', default=None)
+    created_date: datetime.datetime = Field(alias='createdDate', default=None)
+    external_id_field_name: str = Field(alias='externalIdFieldName', default=None)
+    id: str
+    number_batches_completed: int = Field(alias='numberBatchesCompleted', default=None)
+    number_batches_queued: int = Field(alias='numberBatchesQueued', default=None)
+    number_batches_failed: int = Field(alias='numberBatchesFailed', default=None)
+    number_batches_in_progress: int = Field(alias='numberBatchesInProgress', default=None)
+    number_batches_total: int = Field(alias='numberBatchesTotal', default=None)
+    number_records_failed: int = Field(alias='numberRecordsFailed', default=None)
+    number_records_processed: int = Field(alias='numberRecordsProcessed', default=None)
+    number_retries: int = Field(alias='numberRetries', default=None)
+    sobject: str = Field(alias='object')
     operation: OperationEnum
-    state: Optional[JobStateEnum]
-    column_delimiter: Optional[ColumnDelimiterEnum] \
-        = Field(alias='columnDelimiter')
-    line_ending: Optional[LineEndingEnum] = Field(alias='lineEnding')
-    job_type: Optional[JobTypeEnum] = Field(alias='jobType', default=JobTypeEnum.Classic)
-    total_processing_time: Optional[int] = Field(alias='totalProcessingTime')
-    systemModstamp: Optional[datetime.datetime] = Field(alias='systemModstamp')
-    content_url: Optional[str] = Field(alias='contentUrl')
-    query: Optional[str]
+    state: JobStateEnum
+    column_delimiter: ColumnDelimiterEnum = Field(alias='columnDelimiter')
+    line_ending: LineEndingEnum = Field(alias='lineEnding')
+    job_type: JobTypeEnum = Field(alias='jobType', default=JobTypeEnum.Classic)
+    total_processing_time: int = Field(alias='totalProcessingTime', default=None)
+    systemModstamp: datetime.datetime = Field(alias='systemModstamp')
+    content_url: str = Field(alias='contentUrl', default=None)
+    query: str = Field(default=None)
 
 
+    # TODO[pydantic]: We couldn't refactor the `validator`, please replace it by `field_validator` manually.
+    # Check https://docs.pydantic.dev/dev-v2/migration/#changes-to-validators for more information.
     @validator('operation')
     def external_id_field_name_required_for_upsert(cls, v, values, **kwargs):
         if v == 'upsert' and not values.get('external_id_field_name'):
@@ -111,53 +113,43 @@ class JobInfo(BaseModel):
         if not values.get('sobject') and v != 'query':
             raise ValueError('Object must be specified')
         return v
-
-    class Config:
-        allow_population_by_field_name = True
+    model_config = ConfigDict(populate_by_name=True)
 
 
 class BatchInfo(BaseModel):
-    apex_processing_time: Optional[int] = Field(alias='apexProcessingTime')
-    api_active_processing_time: Optional[int] = Field(alias='apiActiveProcessingTime')
-    created_date: Optional[datetime.datetime] = Field(alias='createdDate')
-    id: Optional[str]
-    job_id: Optional[str] = Field(alias='jobId')
-    number_records_failed: Optional[int] = Field(alias='numberRecordsFailed')
-    number_records_processed: Optional[int] = Field(alias='numberRecordsProcessed')
-    state: Optional[BatchStateEnum]
-    state_message: Optional[str] = Field(alias='stateMessage')
-    system_modstamp: Optional[datetime.datetime] = Field(alias='systemModstamp')
-    total_processing_time: Optional[int] = Field(alias='totalProcessingTime')
+    apex_processing_time: int = Field(alias='apexProcessingTime', default=None)
+    api_active_processing_time: int = Field(alias='apiActiveProcessingTime', default=None)
+    created_date: datetime.datetime = Field(alias='createdDate', default=None)
+    id: str
+    job_id: str = Field(alias='jobId', default=None)
+    number_records_failed: int = Field(alias='numberRecordsFailed', default=None)
+    number_records_processed: int = Field(alias='numberRecordsProcessed', default=None)
+    state: BatchStateEnum
+    state_message: str = Field(alias='stateMessage', default=None)
+    system_modstamp: datetime.datetime = Field(alias='systemModstamp', default=None)
+    total_processing_time: int = Field(alias='totalProcessingTime', default=None)
 
 
 class BatchInfoList(BaseModel):
     records: List[BatchInfo] = Field(alias='batchInfo', default=[])
-
-    class Config:
-        allow_population_by_field_name = True
+    model_config = ConfigDict(populate_by_name=True)
 
 
 class JobInfoList(BaseModel):
     records: List[JobInfo] = Field(alias='jobInfo', default=[])
-
-    class Config:
-        allow_population_by_field_name = True
+    model_config = ConfigDict(populate_by_name=True)
 
 
 class APIError(BaseModel):
     code: str = Field(alias='errorCode')
     message: str = Field(alias='message')
-
-    class Config:
-        allow_population_by_field_name = True
+    model_config = ConfigDict(populate_by_name=True)
 
 
 class BulkAPIError(BaseModel):
     code: str = Field(alias='exceptionCode')
     message: str = Field(alias='exceptionMessage')
-
-    class Config:
-        allow_population_by_field_name = True
+    model_config = ConfigDict(populate_by_name=True)
 
 class BulkException(Exception):
     error: BulkAPIError

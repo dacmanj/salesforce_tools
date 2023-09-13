@@ -3,8 +3,17 @@ from salesforce_tools.async_sf.client import SalesforceAPISelector
 from salesforce_tools.metadata import split_api_name
 from urllib.parse import quote
 import itertools
-import json
 import pickle
+import re
+
+
+class InvalidQueryException(Exception):
+    pass
+
+class InvalidFieldException(Exception):
+    pass
+class InvalidRelationshipException(Exception):
+    pass
 
 class SalesforceMetadataFetcherAsync:
     def __init__(self, apis: SalesforceAPISelector, cache_file: str = None):
@@ -211,4 +220,67 @@ class SalesforceMetadataFetcherAsync:
                 )
         return {sobject: picklist_values}
 
+    async def check_fields(self, qry_objects, fields_to_check, exception_on_invalid=True):
+        valid_fields = []
+        if not isinstance(qry_objects, list):
+            qry_objects = [qry_objects]
+        if not isinstance(fields_to_check, list):
+            fields_to_check = [fields_to_check]
+
+        objs_fields = [(await self.get_sobject_describe(obj)) for obj in qry_objects]
+        for f in fields_to_check:
+            p = f.split('.', 1)
+            is_rel = len(p)>1
+            for obj_fields in objs_fields:
+                fields = obj_fields['fields']
+                if is_rel:
+                    relationship = [f for f in fields if (f.get('relationshipName') or '').casefold() == p[0].casefold()]
+                    if relationship:
+                        try:
+                            await self.check_fields(relationship[0]['referenceTo'], p[1], exception_on_invalid=True)
+                        except (InvalidFieldException, InvalidRelationshipException) as e:
+                            if exception_on_invalid:
+                                raise e
+                            continue
+                    else:
+                        if exception_on_invalid:
+                            raise InvalidRelationshipException(f"Invalid relationship {p[0]} on {obj_fields['name']}")                        
+                        else:
+                            continue
+                else:
+                    if not [f['name'] for f in fields if f['name'].casefold() == p[0].casefold()]:
+                        if exception_on_invalid:
+                            raise InvalidFieldException(p[0].upper())
+                        else:
+                            continue
+                valid_fields.append('.'.join(p))
+        return valid_fields
+    
+    @staticmethod
+    def get_fields_from_query(qry):
+        qry = qry.replace('\n','').replace('\r','')
+        try:
+            from_kw = re.findall('FROM', qry, flags=re.IGNORECASE)[0]
+        except IndexError as e:
+            raise InvalidQueryException(f'Missing FROM Keyword in Query {qry}')
+        try:
+            select_kw = re.findall('SELECT', qry, flags=re.IGNORECASE)[0]
+        except IndexError as e:
+            raise InvalidQueryException(f'Missing SELECT Keyword in Query {qry}')
+
+        return [r.strip() for r in qry.split(from_kw)[0].split(select_kw)[1].strip().split(',')]
+
+    @staticmethod
+    def get_table_from_query(qry):
+        qry = qry.replace('\n','').replace('\r','')
+        try:
+            from_kw = re.findall('FROM', qry, flags=re.IGNORECASE)[0]
+        except IndexError as e:
+            raise InvalidQueryException(f'Missing FROM Keyword in Query {qry}')
+        return qry.split(from_kw)[1].split(' ')[1]
+
+
+
+
+    
 

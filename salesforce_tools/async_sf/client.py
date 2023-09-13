@@ -26,6 +26,7 @@ class SalesforceAsyncOAuth2Client(AsyncOAuth2Client):
         self.register_compliance_hook('refresh_token_response', self._fix_token_response)
 
     async def _query_all_pages(self, qry):
+        qry = self.sanitize_query(qry)
         done, url = None, None
         while not done:
             url = url or f'query?q={qry}'
@@ -44,14 +45,18 @@ class SalesforceAsyncOAuth2Client(AsyncOAuth2Client):
             results.append(i)
         return results
     
+    @staticmethod
+    def sanitize_query(str):
+        return str.replace('\n', '').replace('\r', '')
+
     async def query(self, qry, auto=False):
+        qry = self.sanitize_query(qry)
         if auto:
             pages = await self.query_all_pages(qry)
-            results = pages[0].json()
-            for p in range(1, len(results)):
-                pr = pages[p].json()
+            results = pages.pop(-1).json()
+            for p in pages:
+                pr = p.json()
                 results['records'].extend(pr['records'])
-
         else:
             return await self.get(f'query?q={quote(qry)}')
         return results

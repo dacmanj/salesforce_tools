@@ -9,7 +9,7 @@ from salesforce_tools.bulk_models import JobInfo, JobInfoList, BatchInfo, BatchI
     OperationEnum, ContentTypeEnum, ContentTypeHeaderEnum, JobTypeEnum, JobStateEnum, BulkAPIError, APIError,\
     BulkException
 from typing import Union, Optional, List
-from pydantic.v1 import BaseModel, ValidationError, parse_obj_as
+from pydantic import BaseModel, ValidationError
 
 class BulkAPI(object):
     def __init__(self, sf: SalesforceAPISelector):
@@ -17,16 +17,16 @@ class BulkAPI(object):
     
     async def query(self, qry):
         backoff = 5
-        job = (await self.sf.post("jobs/query", json={
+        job = JobInfo.model_validate((await self.sf.post("jobs/query", json={
             "operation": "query",
             "query": qry
-        })).json()
-        while job.get('state') in ('UploadComplete', 'InProgress'):
+        })).json())
+        while job.state in (JobStateEnum.UploadComplete, JobStateEnum.InProgress):
             sleep(backoff)
-            job = (await self.sf.get(f"jobs/query/{job['id']}")).json()
+            job = JobInfo.model_validate((await self.sf.get(f"jobs/query/{job.id}")).json())
             if backoff < 5*60:
-                backoff = min(int(backoff * 1.25), 5*60)
+                backoff = min(int(backoff + 5), 5*60)
 
-        results = await self.sf.get(f"""jobs/query/{job['id']}/results""")
-        return job, list(csv.DictReader(StringIO(results.text)))
+        results = await self.sf.get(f"""jobs/query/{job.id}/results""")
+        return list(csv.DictReader(StringIO(results.text))), JobInfo.model_validate(job)
 
