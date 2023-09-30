@@ -17,7 +17,7 @@ PyJWT = "^2.4.0"
 cryptography = "^41.0.2"
 authlib = "^1.1.0"
 httpx = "^0.24.1"
-pydantic = "^2.0"
+pydantic = "^2.4.2"
 python-dateutil = "^2.8.2"
 
 [tool.poetry.dev-dependencies]
