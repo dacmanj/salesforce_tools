@@ -5,7 +5,7 @@ from salesforce_tools.bulk_models import JobInfo, JobInfoList, BatchInfo, BatchI
     OperationEnum, ContentTypeEnum, ContentTypeHeaderEnum, JobTypeEnum, JobStateEnum, BulkAPIError, APIError,\
     BulkException
 from typing import Union, Optional, List
-from pydantic.v1 import BaseModel, ValidationError, parse_obj_as
+from pydantic import BaseModel, ValidationError, TypeAdapter
 
 
 class BulkJobException(Exception):
@@ -92,20 +92,20 @@ class BulkAPI(SalesforceAPI):
 
     def _model_wrap(self, data: any, ok: bool, model: BaseModel, raise_exception_on_error=False):
         if ok:
-            o = parse_obj_as(model, data)
+            o = TypeAdapter(model).validate_python(data)
         else:
             if isinstance(data, list):
                 try:
-                    o = parse_obj_as(List[BulkAPIError], data)
+                    o = TypeAdapter(List[BulkAPIError]).validate_python(data)
                 except ValidationError:
-                    o = parse_obj_as(List[APIError], data)
+                    o = TypeAdapter(List[APIError]).validate_python(data)
             else:
                 if data.get('error'):
                     data = data.get('error')
                 try:
-                    o = parse_obj_as(BulkAPIError, data)
+                    o = TypeAdapter(BulkAPIError).validate_python(data)
                 except Exception:
-                    o = parse_obj_as(APIError, data)
+                    o = TypeAdapter(APIError).validate_python(data)
 
             if raise_exception_on_error:
                 raise ValueError(o)

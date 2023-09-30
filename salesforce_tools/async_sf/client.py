@@ -3,7 +3,7 @@ import json
 from salesforce_tools.auth import sfdx_auth_url_to_dict
 from subprocess import check_output
 from urllib.parse import quote
-
+from string import Template
 
 class SalesforceAsyncOAuth2Client(AsyncOAuth2Client):
     def __init__(self, *args, **kwargs):
@@ -25,18 +25,38 @@ class SalesforceAsyncOAuth2Client(AsyncOAuth2Client):
         self.register_compliance_hook('access_token_response', self._fix_token_response)
         self.register_compliance_hook('refresh_token_response', self._fix_token_response)
 
-    async def query(self, qry, auto=False):
-        if auto:
-            results, done, url = [], None, None
+    async def _query_all_pages(self, qry):
+        qry = self.sanitize_query(qry)
+        done, url = None, None
+        while not done:
+            url = url or f'query?q={qry}'
+            qr = (await self.get(url, timeout=30))
+            qrj = qr.json()
+            try:
+                done = qrj.get('done', True)
+                url = f"query/{qrj.get('nextRecordsUrl', 'query/').split('query/')[1]}"
+            except AttributeError:
+                done = True
+            yield qr
 
-            while not done:
-                if not url:
-                    qr = (await self.get(f'query?q={quote(qry)}')).json()
-                else:
-                    qr = (await self.get(url, timeout=30)).json()
-                done = qr['done']
-                url = f"query/{qr.get('nextRecordsUrl', 'query/').split('query/')[1]}"
-                results.extend(qr['records'])
+    async def query_all_pages(self, qry):
+        results = []
+        async for i in self._query_all_pages(qry):
+            results.append(i)
+        return results
+    
+    @staticmethod
+    def sanitize_query(str):
+        return str.replace('\n', '').replace('\r', '')
+
+    async def query(self, qry, auto=False):
+        qry = self.sanitize_query(qry)
+        if auto:
+            pages = await self.query_all_pages(qry)
+            results = pages.pop(-1).json()
+            for p in pages:
+                pr = p.json()
+                results['records'].extend(pr['records'])
         else:
             return await self.get(f'query?q={quote(qry)}')
         return results
@@ -66,12 +86,39 @@ class SalesforceAPISelector():
         'tooling': 'tooling_rest'
     }
 
-    def __init__(self, *args, **kwargs):
+    API_CACHE = {
+        'enterprise': '{instance_url}/services/Soap/c/{version}/{organization_id}',
+        'metadata': '{instance_url}/services/Soap/m/{version}/{organization_id}',
+        'partner': '{instance_url}/services/Soap/u/{version}/{organization_id}',
+        'rest': '{instance_url}/services/data/v{version}/',
+        'sobjects': '{instance_url}/services/data/v{version}/sobjects/',
+        'search': '{instance_url}/services/data/v{version}/search/',
+        'query': '{instance_url}/services/data/v{version}/query/',
+        'recent': '{instance_url}/services/data/v{version}/recent/',
+        'tooling_soap': '{instance_url}/services/Soap/T/{version}/{organization_id}',
+        'tooling_rest': '{instance_url}/services/data/v{version}/tooling/',
+        'tooling': '{instance_url}/services/data/v{version}/tooling/',
+        'profile': '{instance_url}/{user_id}',
+        'feeds': '{instance_url}/services/data/v{version}/chatter/feeds',
+        'groups': '{instance_url}/services/data/v{version}/chatter/groups',
+        'users': '{instance_url}/services/data/v{version}/chatter/users',
+        'feed_items': '{instance_url}/services/data/v{version}/chatter/feed-items',
+        'feed_elements': '{instance_url}/services/data/v{version}/chatter/feed-elements',
+        'custom_domain': '{instance_url}'
+    }
+
+    def __init__(self, *args, base_url_parameters=None, **kwargs):
         self.sf = SalesforceAsyncOAuth2Client(**kwargs)
         self._oauth_user_info_url = f"{self.sf.instance_url}/services/oauth2/userinfo"
         self._userinfo = None
         self.api_version = self.sf.api_version
-
+        self.base_url_parameters = {"instance_url": self.sf.instance_url, 
+                                    "version": self.sf.api_version, 
+                                    "organization_id": kwargs.get("organization_id", None) 
+                                    }
+        if base_url_parameters:
+            self.base_url_parameters |= base_url_parameters
+        
     @property
     async def userinfo(self):
         if not self._userinfo:
@@ -82,12 +129,14 @@ class SalesforceAPISelector():
     async def apis(self):
         return (await self.userinfo).get('urls')
 
-    async def __getattr__(self, item):
+    def __getattr__(self, item):
         try:
-            item = SalesforceAPISelector.ALIASES[item] if item in SalesforceAPISelector.ALIASES.keys() else item
-            base_url = (await self.userinfo).get('urls').get(item).replace('{version}', self.api_version)
+            item = SalesforceAPISelector.ALIASES[item] if item in SalesforceAPISelector.ALIASES.keys() else item or self.API_CACHE.get('rest')
+            base_url = self.API_CACHE.get(item).format(**self.base_url_parameters)
             args = self.sf.args
             args['base_url'] = base_url
             return SalesforceAsyncOAuth2Client(**args)
-        except AttributeError:
-            raise SalesforceAPISelectorException('API Not Found')
+        except AttributeError as e:
+            raise SalesforceAPISelectorException(f'API Not Found: {e}')
+        except KeyError as e:
+            raise SalesforceAPISelectorException(f'Missing Attribute for Base URL: {e}')

@@ -1,0 +1,659 @@
+from io import StringIO
+import csv
+
+def flatten_field_describe(salesforce_key, details):
+    object_name = salesforce_key.split('.')[0]
+    name = details.get('name')
+    label = details.get('label')
+    type = details.get('type')
+    type_with_details = type
+    help_text = details.get('inlineHelpText')
+    formula = details.get('formula')
+    required = details.get('required')
+    external_id = details.get('externalId')
+    length = details.get('length')
+    precision = details.get('precision')
+    scale = details.get('scale')
+    updateable = details.get('updateable')
+    createable = details.get('createable')
+    restricted_picklist = details.get('restrictedPicklist')
+    calculated = details.get('calculated')
+    nillable = details.get('nillable')
+    picklist_values = []
+    for pvalue in details.get('picklistValues'):
+        if pvalue.get('active'):
+            if pvalue.get('label'):
+                picklist_values.append(pvalue.get('label'))
+
+    picklist_values = ";".join(picklist_values)
+
+    attributes = []
+
+    if precision > 0 or scale > 0:
+        length_or_number_size = f"{precision}, {scale}"
+        type_with_details = f"{type} ({length_or_number_size})"
+
+    if type == 'reference':
+        reference_to = ';'.join(details.get('referenceTo'))
+        type_with_details = f"{type} ({reference_to})"
+        type = type_with_details
+
+    if picklist_values:
+        type_with_details = f"{type} ({picklist_values})"
+
+    if type == 'string' or type == 'textArea':
+        type_with_details = f"{type} ({length})"
+
+    # attribute flags
+    if external_id:
+        attributes.append('EXT ID')
+
+    if required:
+        attributes.append('REQUIRED')
+
+    if restricted_picklist:
+        attributes.append('RESTRICTED')
+
+    if calculated:
+        attributes.append('CALCULATED')
+
+    if not updateable:
+        attributes.append('NOT UPDATEABLE')
+
+    if not createable:
+        attributes.append('NOT CREATEABLE')
+
+    if not nillable:
+        attributes.append('NOT NILLABLE')
+
+    if attributes:
+        type_with_details += ' ' + ' '.join(attributes)
+
+    # Custom
+    category = {0: 'Standard', 1: 'Custom', 2: 'Packaged'}.get(name.count('__'))
+
+    row = {'Salesforce Field Key': f"{object_name}.{label}", 'Object': object_name,
+           'Field Label': label,
+           'API Name': name, 'Type with Details': type_with_details, 'Help Text': help_text,
+           'Formula': formula,
+           'Attributes': ';'.join(attributes), 'Type': type, 'Picklist Values': picklist_values,
+           'Updateable': updateable,
+           #'Details': json.dumps(details, skipkeys={'urls'}),
+           'Category': category
+    }
+    return row
+
+
+def split_api_name(sf_name):
+    sf_split = sf_name.split('__')
+    namespace = ''
+    suffix = ''
+    custom = True
+    if len(sf_split) == 3:
+        namespace = sf_split[0]
+        basename = sf_split[1]
+        suffix = '__' + sf_split[2]
+    elif len(sf_split) == 2:
+        basename = sf_split[0]
+        suffix = '__' + sf_split[1]
+    else:
+        basename = sf_split[0]
+        custom = False
+    return {'namespace': namespace, 'basename': basename, 'suffix': suffix, 'custom': custom}
+
+
+STANDARD_VALUE_SETS_CSV = """StandardValueSet,QualifiedApiNames
+AAccreditationRating,Accreditation.AccreditationRating
+AccountContactMultiRoles,AccountContactRelation.Roles
+AccountContactRole,AccountContactRole.Role
+AccountOwnership,Account.Ownership;AccountCleanInfo.Ownership
+AccountRating,Account.Rating;Lead.Rating
+AccountType,Account.Type
+AccreditationAccreditingBody,Accreditation.AccreditingBody
+AccreditationStatus,Accreditation.Status
+AccreditationSubType,Accreditation.SubType
+AccreditationType,Accreditation.Type
+ACInitSumEmployeeType,AntiCorruptionInitSum.EmployeeType
+ACInitSumInitiativeType,AntiCorruptionInitSum.InitiativeType
+ACISumRecipientCategory,AntiCorruptionInitSum.RecipientCategory
+ACorruptionInitSumCountry,AntiCorruptionInitSum.Country
+ACorruptionInitSumRegion,AntiCorruptionInitSum.Region
+ActivityTimeEnum,ActivityTiming.ActivityTime
+AdmissionSource,CareRequest.AdmissionSource
+AdmissionType,CareRequest.AdmissionType
+AllergyIntoleranceCategory,AllergyIntolerance.Category
+AllergyIntoleranceSeverity,AllergyIntolerance.Severity
+AllergyIntoleranceStatus,AllergyIntolerance.Status
+AllergyIntoleranceType,AllergyIntolerance.Type
+AllergyVerificationStatus,AllergyIntolerance.VerificationStatus
+AppealRequestReasonType,CareRequest.AppealRequestReasonType
+ApprovedLevelOfCare,CareRequest.ApprovedLevelOfCare
+AQuestionQuestionCategory,AssessmentQuestion.QuestionCategory
+AReasonAppointmentReason,AppointmentReason.AppointmentReason
+AssessmentRating,Assessment.AssessmentRating
+AssessmentStatus,Assessment.AssessmentStatus
+AssetActionCategory,AssetAction.Category
+AssetRelationshipType,AssetRelationship.RelationshipType
+AssetStatus,Asset.Status
+AssociatedLocationType,AssociatedLocation.Type
+AuthorNoteRecipientType,AuthorNote.RecipientType
+BarrierCodeType,CareBarrierType.CodeType
+BCCertificationType,BoardCertification.CertificationType
+BLicenseJurisdictionType,BusinessLicense.JurisdictionType
+BLicenseVerificationStatus,BusinessLicense.VerificationStatus
+BoardCertificationStatus,BoardCertification.Status
+BusinessLicenseStatus,BusinessLicense.Status
+CampaignMemberStatus,CampaignMember.Status
+CampaignStatus,Campaign.Status
+CampaignType,Campaign.Type
+CardType,CardPaymentMethod.CardType
+CareAmbulanceTransReason,CareRequestItem.AmbulanceTransportReason
+CareAmbulanceTransType,CareRequestItem.AmbulanceTransportType
+CareBarrierPriority,CareBarrier.Priority
+CareBarrierStatus,CareBarrier.Status
+CareBenefitVerifyRequestStatus,CareBenefitVerifyRequest.Status
+CareDeterminantPriority,CareDeterminant.Priority
+CareDeterminantTypeDomain,CareDeterminantType.Domain
+CareDeterminantTypeType,CareDeterminantType.Type
+CareEpisodeStatus,CareEpisode.Status
+CareEpisodeType,CareEpisode.Type
+CareItemStatus,CareRequestItem.Status
+CareItemStatusReason,CareRequestItem.StatusReason
+CareMetricTargetType,CareMetricTarget.Type
+CareObservationCategory,CareObservation.Category
+CareObservationStatus,CareObservation.ObservationStatus
+CarePlanActivityStatus,CarePlanActivity.Status
+CarePlanAuthorizationType,CarePlan.AuthorizationType
+CarePlanDetailDetailType,CarePlanDetail.DetailType
+CarePreauthItemLaterality,CarePreauthItem.Laterality
+CarePreauthStatus,CarePreauth.Status
+CareProgramEnrolleeStatus,CareProgramEnrollee.Status
+CareProgramGoalPriority,CareProgramGoal.Priority
+CareProgramGoalStatus,CareProgramGoal.Status
+CareProgramProductStatus,CareProgramProduct.Status
+CareProgramProviderRole,CareProgramProvider.Role
+CareProgramProviderStatus,CareProgramProvider.Status
+CareProgramStatus,CareProgram.Status
+CareProgramTeamMemberRole,CareProgramTeamMember.Role
+CareQuantityType,CareRequestItem.QuantityType
+CareRegisteredDeviceStatus,CareRegisteredDevice.Status
+CareRequestExtensionAmbulanceTransportReason,CareRequestExtension.AmbulanceTransportReason
+CareRequestExtensionAmbulanceTransportType,CareRequestExtension.AmbulanceTransportType
+CareRequestExtensionNursingHomeResidentialStatus,CareRequestExtension.NursingHomeResidentialStatus
+CareRequestExtensionRequestType,CareRequestExtension.RequestType
+CareRequestExtensionServiceLevel,CareRequestExtension.ServiceLevel
+CareRequestMemberGender,CareRequest.MemberGender
+CareRequestMemberPrognosis,CareRequest.MemberPrognosis
+CareRequestQuantityType,CareRequest.QuantityType
+CareRequestReviewerStatus,CareRequestReviewer.Status
+CareSpecialtySpecialtyType,CareSpecialty.SpecialtyType
+CareSpecialtySpecialtyUsage,CareSpecialty.SpecialtyUsage
+CareTaxonomyTaxonomyType,CareTaxonomy.TaxonomyType
+CareTeamStatus,CareTeam.Status
+CaseContactRole,CaseContactRole.Role
+CaseOrigin,Case.Origin
+CasePriority,Case.Priority
+CaseReason,Case.Reason
+CaseServicePlanStatus,CarePlan.Status
+CaseStatus,Case.Status
+CaseType,Case.Type
+CBCoverageType,CoverageBenefit.CoverageType
+CBenefitItemLimitTermType,CoverageBenefitItemLimit.TermType
+CBItemLimitCoverageLevel,CoverageBenefitItemLimit.CoverageLevel
+CBItemLimitNetworkType,CoverageBenefitItemLimit.NetworkType
+CCFALineOfBusiness,CategorizedCareFeeAgreement.LineofBusiness
+CCPAdditionalBenefits,CrbnCreditProject.AdditionalBenefits
+CCProjectMitigationType,CrbnCreditProject.MitigationType
+CCPStandardsAgencyName,CrbnCreditProject.StandardsAgencyName
+CCreditProjectProjectType,CrbnCreditProject.ProjectType
+CDPresentOnAdmission,CareDiagnosis.PresentOnAdmission
+CEIdentifierIdUsageType,ClinicalEncounterIdentifier.IdUsageType
+CEncounterAdmissionSource,ClinicalEncounter.AdmissionSource
+CEncounterCategory,ClinicalEncounter.Category
+CEncounterDietPreference,ClinicalEncounter.DietPreference
+CEncounterFacilityStatus,ClinicalEncounterFacility.Status
+CEncounterServiceType,ClinicalEncounter.ServiceType
+CEncounterSpecialCourtesy,ClinicalEncounter.SpecialCourtesy
+CEncounterStatus,ClinicalEncounter.Status
+CEpisodeDetailDetailType,CareEpisodeDetail.DetailType
+ChangeRequestRelatedItemImpactLevel,ChangeRequestRelatedItem.ImpactLevel
+ChangeRequestBusinessReason,ChangeRequest.BusinessReason
+ChangeRequestCategory,ChangeRequest.Category
+ChangeRequestImpact,ChangeRequest.Impact
+ChangeRequestPriority,ChangeRequest.Priority
+ChangeRequestRiskLevel,ChangeRequest.RiskLevel
+ChangeRequestStatus,ChangeRequest.Status
+ClassRankReportingFormat,PersonEducation.ClassRankReportingFormat
+ClassRankWeightingType,PersonEducation.ClassRankWeightingType
+ClinicalAlertCategories,ClinicalAlert.Categories
+ClinicalAlertStatus,ClinicalAlert.Status
+ClinicalCaseType,CareRequest.ClinicalCaseType
+ClinicalDetectedIssueSeverityLevel,ClinicalDetectedIssue.SeverityLevel
+ClinicalDetectedIssueStatus,ClinicalDetectedIssue.Status
+COComponentValueType,CareObservationComponent.ValueType
+COCValueInterpretation,CareObservationComponent.ValueInterpretation
+CodeSetCodeSetType,CodeSet.CodeSetType
+CommunicationChannel,EngagementInteraction.CommunicationChannel
+CompanyRelationshipType,Supplier.CompanyRelationshipType
+ConsequenceOfFailure,Asset.ConsequenceOfFailure
+ContactPointAddressType,ContactPointAddress.AddressType
+ContactPointUsageType,ContactPointAddress.UsageType
+ContactRequestReason,ContactRequest.RequestReason
+ContactRequestStatus,ContactRequest.Status
+ContactRole,OpportunityContactRole.Role
+ContractContactRole,ContractContactRole.Role
+ContractLineItemStatus,ContractLineItem.Status
+ContractStatus,Contract.Status
+COProcessingResult,CareObservation.ProcessingResult
+COValueInterpretation,CareObservation.ValueInterpretation
+CPAActivityType,CarePlanActivity.ActivityType
+CPADetailDetailType,CarePlanActivityDetail.DetailType
+CPADetailDetailType,CarePlanActivityDetail.DetailType
+CPAdverseActionActionType,CareProviderAdverseAction.ActionType
+CPAdverseActionStatus,CareProviderAdverseAction.Status
+CPAgreementAgreementType,ContractPaymentAgreement.AgreementType
+CPAgreementLineofBusiness,ContractPaymentAgreement.LineofBusiness
+CPAProhibitedActivity,CarePlanActivity.ProhibitedActivity
+CPDProblemPriority,CarePlanDetail.ProblemPriority
+CPEligibilityRuleStatus,CareProgramEligibilityRule.Status
+CPEnrolleeProductStatus,CareProgramEnrolleeProduct.Status
+CPEnrollmentCardStatus,CareProgramEnrollmentCard.Status
+CPFSpecialtySpecialtyRole,CareProviderFacilitySpecialty.SpecialtyRole
+CProgramProductAvailability,CareProgramProduct.Availability
+CPTemplateProblemPriority,CarePlanTemplateProblem.Priority
+CRDDrugAdministrationSetting,CareRequestDrug.DrugAdministrationSetting
+CRDNameType,CareRegisteredDevice.NameType
+CCRDPriority,CareRequestDrug.Priority
+CCRDPriority,CareRequestDrug.Priority
+CRDRequestType,CareRequestDrug.RequestType
+CRDStatus,CareRequestDrug.Status
+CRDStatusReason,CareRequestDrug.StatusReason
+CRECaseSubStatus,CareRequestExtension.CaseSubStatus
+CRECaseSubStatus,CareRequestExtension.CaseSubStatus
+CREDocumentAttachmentStatus,CareRequestExtension.DocumentAttachmentStatus
+CREIndependentReviewDetermination,CareRequestExtension.IndependentReviewDetermination
+CREPriorAuthRequestIdentifier,CareRequestExtension.AuthorizationRefIdentifier
+CREPriorDischargeStatus,CareRequestExtension.PriorDischargeStatus
+CREReopenRequestOutcome,CareRequestExtension.ReopenRequestOutcome
+CREReopenRequestType,CareRequestExtension.ReopenRequestType
+CRERequestOutcome,CareRequestExtension.RequestOutcome
+CRIApprovedLevelOfCare,CareRequestItem.ApprovedLevelOfCare
+CRIClinicalDetermination,CareRequestItem.ClinicalDetermination
+CRICurrentLevelOfCare,CareRequestItem.CurrentLevelOfCare
+CRIDeniedLevelOfCare,CareRequestItem.DeniedLevelOfCare
+CRIModifiedLevelOfCare,CareRequestItem.ModifiedLevelOfCare
+CRIPriority,CareRequestItem.Priority
+CRIRequestedLevelOfCare,CareRequestItem.RequestedLevelOfCare
+CRIRequestType,CareRequestItem.RequestType
+CRReviewerReviewerType,CareRequestReviewer.ReviewerType
+CSBundleUsageType,CodeSetBundle.Type
+CServiceRequestIntent,ClinicalServiceRequest.Type
+CServiceRequestPriority,ClinicalServiceRequest.Priority
+CServiceRequestStatus,ClinicalServiceRequest.Status
+CSRequestDetailDetailType,ClinicalServiceRequestDetail.DetailType
+CurrentLevelOfCare,CareRequest.CurrentLevelOfCare
+DChecklistItemStatus,DocumentChecklistItem.Status
+DecisionReason,CareRequest.DecisionReason
+DeniedLevelOfCare,CareRequest.DeniedLevelOfCare
+DiagnosisCodeType,CareDiagnosis.CodeType
+DiagnosticSummaryCategory,DiagnosticSummary.Category
+DiagnosticSummaryStatus,DiagnosticSummary.Status
+DigitalAssetStatus,Asset.DigitalAssetStatus
+DEInclSumDiversityType,DivrsEquityInclSum.DiversityType
+DEInclSumEmployeeType,DivrsEquityInclSum.EmployeeType
+DEInclSumEmploymentType,DivrsEquityInclSum.EmploymentType
+DEInclSumGender,DivrsEquityInclSum.Gender
+DEISumDiversityCategory,DivrsEquityInclSum.DiversityCategory
+DischargeDiagnosisCodeType,CareDiagnosis.DischargeCodeType
+DIssueDetailType,ClinicalDetectedIssueDetail.DetailType
+DivrsEquityInclSumLocation,DivrsEquityInclSum.Location
+DivrsEquityInclSumRace,DivrsEquityInclSum.Race
+DrugClinicalDetermination,CareRequestDrug.ClinicalDetermination
+DSDDocumentRelationType,DiagnosticSummaryDetail.DocumentRelationType
+DSDocumentStage,DiagnosticSummary.DocumentStage
+DSummaryDetailDetailType,DiagnosticSummaryDetail.DetailType
+DSummaryUsageType,DiagnosticSummary.UsageType
+ECTypeContactPointType,EngagementChannelType.ContactPointType
+EducationLevel,PersonEducation.EducationLevel
+EEligibilityCriteriaStatus,EnrollmentEligibilityCriteria.Status
+EmploymentOccupation,PersonEmployment.Occupation
+EmploymentStatus,PersonEmployment.EmploymentStatus
+EngagementAttendeeRole,EngagementAttendee.Role
+EngagementSentimentEnum,EngagementInteraction.Sentiment
+EngagementStatusEnum,EngagementInteraction.Status
+EngagementTypeEnum,EngagementInteraction.Type
+EnrolleeOptOutReasonType,CareProgramEnrollee.OptOutReasonType
+EntitlementType,Entitlement.Type
+EBSEmployeeBenefitType,EmpBenefitSummary.EmployeeBenefitType
+EBSPercentageCalcType,EmpBenefitSummary.PercentageCalcType
+EBSummaryBenefitUsage,EmpBenefitSummary.BenefitUsage
+EBSummaryEmploymentType,EmpBenefitSummary.EmploymentType
+EBSEmployeeBenefitType,EmpBenefitSummary.EmployeeBenefitType
+EBSPercentageCalcType,EmpBenefitSummary.PercentageCalcType
+EDemographicSumAgeGroup,EmployeeDemographicSum.AgeGroup
+EDemographicSumGender,EmployeeDemographicSum.Gender
+EDemographicSumRegion,EmployeeDemographicSum.Region
+EDemographicSumReportType,EmployeeDemographicSum.ReportType
+EDemographicSumWorkType,EmployeeDemographicSum.WorkType
+EDevelopmentSumGender,EmployeeDevelopmentSum.Gender
+EDSumEmployeeType,EmployeeDevelopmentSum.EmployeeType
+EDSumEmploymentType,EmployeeDemographicSum.EmploymentType
+EDSumProgramCategory,EmployeeDevelopmentSum.ProgramCategory
+EPSumMarket,EconomicPerformanceSum.Market
+EPSumPerformanceCategory,EconomicPerformanceSum.PerformanceCategory
+EPSumPerformanceType,EconomicPerformanceSum.PerformanceType
+EPSumRegion,EconomicPerformanceSum.Region
+ERCompanyBusinessRegion,EmssnRdctnCommitment.CompanyBusinessRegion
+ERCompanySector,EmssnRdctnCommitment.CompanySector
+EReductionTargetTargetType,EmssnReductionTarget.TargetType
+ERTargetOtherTargetKpi,EmssnReductionTarget.OtherTargetKpi
+ERTTargetSettingMethod,EmssnReductionTarget.TargetSettingMethod
+EventSubject,Event.Subject
+EventType,Event.Type
+FacilityRoomBedType,CareRequest.FacilityRoomBedType
+FinalLevelOfCare,CareRequest.FinalLevelOfCare
+FinanceEventAction,FinanceTransaction.EventAction
+FinanceEventType,FinanceBalanceSnapshot.EventType;FinanceTransaction.EventType
+FiscalYearPeriodName,Period.PeriodLabel
+FiscalYearPeriodPrefix,FiscalYearSettings.PeriodPrefix
+FiscalYearQuarterName,Period.QuarterLabel
+FiscalYearQuarterPrefix,FiscalYearSettings.QuarterPrefix
+ForecastingItemCategory,n/a
+FreightHaulingMode,FrgtHaulingEmssnFctr.FreightHaulingMode;FrgtHaulingEnrgyUse.FreightHaulingMode
+FtprntAuditApprovalStatus,ScopeCrbnFtprnt.AuditApprovalStatus;StnryAssetCrbnFtprnt.AuditApprovalStatus;VehicleAssetCrbnFtprnt.AuditApprovalStatus;WasteFootprint.AuditApprovalStatus
+FulfillmentStatus,FulfillmentOrder.Status
+FulfillmentType,FulfillmentOrder.Type
+GADetailDetailType,GoalAssignmentDetail.DetailType
+GoalAssignmentProgressionStatus,GoalAssignment.ProgressionStatus
+GoalAssignmentStatus,GoalAssignment.Status
+GoalDefinitionCategory,GoalDefinition.Category
+GoalDefinitionUsageType,GoalDefinition.UsageType
+GovtFinancialAsstSumType,GovtFinancialAsstSum.Type
+GpaWeightingType,PersonEducation.GpaWeightingType
+GrievanceType,CareRequest.GrievanceType
+HCFacilityLocationType,HealthcareFacility.LocationType
+HcpCategory,HealthCareProcedure.Category
+HcpCodeType,HealthCareProcedure.CodeType
+HealthCareDiagnosisCategory,HealthCareDiagnosis.Category
+HealthCareDiagnosisCodeType,HealthCareDiagnosis.CodeType
+HealthCareDiagnosisGender,HealthCareDiagnosis.Gender
+HealthcareProviderStatus,HealthcareProvider.Status
+HealthConditionDetailType,HealthConditionDetail.DetailType
+HealthConditionSeverity,HealthCondition.Severity
+HealthConditionStatus,HealthCondition.ConditionStatus
+HealthConditionType,HealthCondition.Type
+HealthDiagnosticStatus,HealthCondition.DiagnosticStatus
+HFNetworkGenderRestriction,HealthcareFacilityNetwork.GenderRestriction
+HFNetworkPanelStatus,HealthcareFacilityNetwork.PanelStatus
+HPayerNetworkNetworkType,HealthcarePayerNetwork.NetworkType
+HPayerNwkLineOfBusiness,HealthcarePayerNetwork.LineofBusiness
+HPFGenderRestriction,HealthcarePractitionerFacility.GenderRestriction
+HPFTerminationReason,HealthcarePractitionerFacility.TerminationReason
+HProviderNpiNpiType,HealthcareProviderNpi.NpiType
+HProviderProviderClass,HealthcareProvider.ProviderClass
+HProviderProviderType,HealthcareProvider.ProviderType
+HPSpecialtySpecialtyRole,HealthcareProviderSpecialty.SpecialtyRole
+HSActionLogActionStatus,HealthScoreActionLog.ActionStatus
+IaApplnStatus,IndividualApplication.Status
+IaAuthCategory,IndividualApplication.Category
+IaInternalStatus,IndividualApplication.InternalStatus
+IAItemStatus,IndividualApplicationItem.Status
+IARejectionReason,IndividualApplication.RejectionReason
+IAServiceType,IndividualApplication.ServiceType
+IdeaCategory,IdeaTheme.Categories
+IdeaMultiCategory,Idea.Categories
+IdeaStatus,Idea.Status
+IdeaThemeStatus,IdeaTheme.Status
+IdentifierIdUsageType,Identifier.IdUsageType
+IFnolChannel,InsurancePolicy.FnolChannel
+IncidentCategory,Incident.Category
+IncidentImpact,Incident.Impact
+IncidentPriority,Incident.Priority
+IncidentRelatedItemImpactLevel,IncidentRelatedItem.ImpactLevel
+IncidentRelatedItemImpactType,IncidentRelatedItem.ImpactType
+IncidentReportedMethod,Incident.ReportedMethod
+IncidentStatus,Incident.Status
+IncidentSubCategory,Incident.SubCategory
+IncidentType,Incident.Type
+IncidentUrgency,Incident.Urgency
+Industry,Account.Industry;AccountCleanInfo.Industry;Lead.Industry;LeadCleanInfo.Industry
+InterventionCodeType,CareInterventionType.CodeType
+IPCancelationReasonType,InsurancePolicy.CancellationReasonType
+IPCBenefitPaymentFrequency,InsurancePolicyCoverage.BenefitPaymentFrequency
+IPCCategory,InsurancePolicyCoverage.Category
+IPCCategoryGroup,InsurancePolicyCoverage.CategoryGroup
+IPCDeathBenefitOptionType,InsurancePolicyCoverage.DeathBenefitOptionType
+IPCIncomeOptionType,InsurancePolicyCoverage.IncomeOptionType
+IPCLimitRange,InsurancePolicyCoverage.LimitRange
+IPolicyAuditTerm,InsurancePolicy.AuditTerm
+IPolicyChangeSubType,InsurancePolicy.ChangeSubtype
+IPolicyChangeType,InsurancePolicy.ChangeType
+IPolicyChannel,InsurancePolicy.RenewalChannel
+IPolicyPlanTier,InsurancePolicy.PlanTier
+IPolicyPlanType,InsurancePolicy.PlanType
+IPolicyPolicyType,InsurancePolicy.PolicyType
+IPolicyPremiumCalcMethod,InsurancePolicy.PremiumCalculationMethod
+IPolicyPremiumFrequency,InsurancePolicy.PremiumFrequency
+IPolicyPremiumPaymentType,InsurancePolicy.PremiumPaymentType
+IPolicyStatus,InsurancePolicy.Status
+IPolicySubStatusCode,InsurancePolicy.Substatus
+IPolicyTerm,InsurancePolicy.PolicyTerm
+IPolicyTransactionStatus,InsurancePolicyTransaction.Status
+IPolicyTransactionType,InsurancePolicyTransaction.Type
+IPOwnerPOwnerType,InsurancePolicyOwner.PolicyOwnerType
+IPParticipantRole,InsurancePolicyParticipant.Role
+IPPRelationshipToInsured,InsurancePolicyParticipant.RelationshipToInsured
+LeadSource,Account.AccountSource;CampaignMember.LeadSource;Contact.LeadSource;Lead.LeadSource;Opportunity.LeadSource
+LeadStatus,Lead.Status
+LicenseClassType,BusinessLicense.LicenseClass
+LineOfAuthorityType,BusinessLicense.LineOfAuthority
+LocationType,Location.LocationType
+LPIApplnCategory,BusinessLicenseApplication.ApplicationCategory
+LPIApplnStatus,BusinessLicenseApplication.Status
+MedicationCategoryEnum,Medication.MedicationCategory
+MedicationDispenseMedAdministrationSettingCategory,MedicationDispense.MedAdministrationSettingCategory
+MedicationDispenseStatus,MedicationDispense.Status
+MedicationDispenseSubstitutionReason,MedicationDispense.SubstitutionReason
+MedicationDispenseSubstitutionType,MedicationDispense.SubstitutionType
+MedicationStatementStatus,MedicationStatement.Status
+MedicationStatus,Medication.Status
+MedReviewRepresentativeType,MedicationTherapyReview.SurrogateType
+MedTherapyReviewSubtype,MedicationTherapyReview.ReviewSubtype
+MemberPlanPrimarySecondaryTertiary,MemberPlan.PrimarySecondaryTertiary
+MemberPlanRelToSub,MemberPlan.RelationshipToSubscriber
+MemberPlanStatus,MemberPlan.Status
+MemberPlanVerificStatus,MemberPlan.VerificationStatus
+MilitaryService,Individual.MilitaryService
+ModifiedCareCodeType,CareRequestItem.ModifiedCodeType
+ModifiedDiagnosisCodeType,CareDiagnosis.ModifiedCodeType
+ModifiedDrugCodeType,CareRequestDrug.ModifiedCodeType
+ModifiedLevelOfCare,CareRequest.ModifiedLevelOfCare
+MRequestPriority,MedicationRequest.Priority
+MRequestStatus,MedicationRequest.Status
+MRequestTherapyDuration,MedicationRequest.TherapyDuration
+MRequestType,MedicationRequest.Type
+MStatementDeliverySetting,MedicationStatement.DeliverySetting
+MStatementDetailType,MedicationStatementDetail.DetailType
+OcrService,OcrDocumentScanResult.OcrService
+OcrStatus,OcrDocumentScanResult.OcrStatus
+OIncidentSummaryHazardType,OrgIncidentSummary.HazardType
+OISCorrectiveActionType,OrgIncidentSummary.CorrectiveActionType
+OISummaryIncidentSubtype,OrgIncidentSummary.IncidentSubtype
+OISummaryIncidentType,OrgIncidentSummary.IncidentType
+OISummaryPenaltyType,OrgIncidentSummary.PenaltyType
+OpportunityCompetitor,OpportunityCompetitor.CompetitorName
+OpportunityStage,Opportunity.StageName
+OpportunityType,Opportunity.Type
+OrderItemSummaryChgRsn,OrderItemSummaryChange.Reason
+OrderStatus,
+OrderSummaryRoutingSchdRsn,OrderSummaryRoutingSchedule.Reason
+OrderSummaryStatus,OrderSummary.Status
+OrderType,Order.Type
+ParProvider,CareRequest.ParProvider
+PartnerRole,PartnerRole.ReverseRole
+PartyProfileCountryofBirth,PartyProfile.CountryofBirth
+PartyProfileEmploymentType,PartyProfile.EmploymentType
+PartyProfileFundSource,PartyProfile.FundSource
+PartyProfileGender,PartyProfile.Gender
+PartyProfileResidentType,PartyProfile.ResidentType
+PartyProfileReviewDecision,PartyProfile.ReviewDecision
+PartyProfileRiskType,PartyProfile.RiskType
+PartyProfileStage,PartyProfile.Stage
+PartyScreeningStepType,PartyScreeningStep.Type
+PartyScreeningSummaryStatus,PartyScreeningSummary.Status
+PatientImmunizationStatus,PatientImmunization.Status
+PEFEFctrDataSourceType,ProductEmissionsFactor.EmssnFctrDataSourceType
+PersonEmploymentType,PersonEmployment.EmploymentType
+PersonLanguageLanguage,PersonLanguage.Language
+PersonLanguageSpeakingProficiencyLevel,PersonLanguage.SpeakingProficiencyLevel
+PersonLanguageWritingProficiencyLevel,PersonLanguage.WritingProficiencyLevel
+PersonNameNameUsageType,PersonName.NameUsageType
+PersonVerificationStatus,PersonEmployment.VerificationStatus
+PHealthReactionSeverity,PatientHealthReaction.Severity
+PIdentityVerificationResult,PartyIdentityVerification.Result
+PIdentityVerificationStatus,PartyIdentityVerification.Status
+PIVerificationStepStatus,PartyIdentityVerificationStep.Status
+PIVerificationStepType,PartyIdentityVerificationStep.Type
+PIVerificationVerifiedBy,PartyIdentityVerification.VerifiedBy
+PIVOverriddenResult,PartyIdentityVerification.OverriddenResult
+PIVResultOverrideReason,PartyIdentityVerificationResult.OverrideReason
+PIVSVerificationDecision,PartyIdentityVerificationStep.VerificationDecision
+PlaceOfService,CareRequest.PlaceOfService
+PlanBenefitStatus,PlanBenefit.Status
+PMDDosageDefinitionType,PatientMedicationDosage.DosageDefinitionType
+PMDosageDosageAmountType,PatientMedicationDosage.DosageQuantityType
+PMDosageRateType,PatientMedicationDosage.DosageRateType
+PMPDetailDetailType,PatientMedicalProcedureDetail.DetailType
+PMPOutcome,PatientMedicalProcedure.Outcome
+PMPStatus,PatientMedicalProcedure.Status
+PPCreditScoreProvider,PartyProfile.CreditScoreProvider
+PPPrimaryIdentifierType,PartyProfile.PrimaryIdentifierType
+PProfileAddressAddressType,PartyProfileAddress.AddressType
+PProfileCountryOfDomicile,PartyProfile.CountryOfDomicile
+PProfileEmploymentIndustry,PartyProfile.EmploymentIndustry
+PProfileNationality,PartyProfile.Nationality
+PProfileOffBoardingReason,PartyProfile.OffBoardingReason
+PProfileRiskRiskCategory,PartyProfileRisk.RiskCategory
+PPROverridenRiskCategory,PartyProfileRisk.OverridenRiskCategory
+PPTaxIdentificationType,PartyProfile.TaxpayerIdentificationType
+ProblemCategory,Problem.Category
+ProblemDefinitionCategory,ProblemDefinition.Category
+ProblemDefinitionPriority,ProblemDefinition.Priority
+ProblemDefinitionUsageTypeEnum,ProblemDefinition.UsageType
+ProblemImpact,Problem.Impact
+ProblemPriority,Problem.Priority
+ProblemRelatedItemImpactLevel,ProblemRelatedItem.ImpactLevel
+ProblemRelatedItemImpactType,ProblemRelatedItem.ImpactType
+ProblemStatus,Problem.Status
+ProblemSubCategory,Problem.SubCategory
+ProblemUrgency,Problem.Urgency
+ProcessExceptionCategory,ProcessException.Category
+ProcessExceptionPriority,ProcessException.Priority
+ProcessExceptionSeverity,ProcessException.Severity
+ProcessExceptionStatus,ProcessException.Status
+ProductFamily,Product.Family
+ProdRequestLineItemStatus,ProductRequestLineItem.Status
+ProductLineEnum,EngagementChannelType.UsageType
+ProductRequestStatus,ProductRequest.Status
+ProgressionCriteriaMet,CareRequest.CriteriaMet
+PScreeningStepResultCode,PartyScreeningStep.ResultCode
+PScreeningStepStatus,PartyScreeningStep.Status
+PSSResultOverrideReason,PartyScreeningSummary.ResultOverrideReason
+PSStepMatchedFieldList,PartyScreeningStep.MatchedFieldList
+PSSummaryScreenedBy,PartyScreeningSummaryS.creenedBy
+PSSummaryScreeningDecision,PartyScreeningSummary.ScreeningDecision
+PurchaserPlanAffiliation,PurchaserPlan.Affiliation
+PurchaserPlanStatus,PurchaserPlan.PlanStatus
+PurchaserPlanType,PurchaserPlan.PlanType
+QuantityUnitOfMeasure,Product.QuantityUnitOfMeasure;ReturnOrderLineItem.QuantityUnitOfMeasure
+QuestionOrigin,Question.Origin
+QuickTextCategory,QuickText.Category
+QuickTextChannel,QuickText.Channel
+QuoteStatus,Quote.Status
+ReceivedDocumentDirection,ReceivedDocument.Direction
+ReceivedDocumentOcrStatus,ReceivedDocument.OcrStatus
+ReceivedDocumentPriority,ReceivedDocument.Priority
+ReceivedDocumentStatus,ReceivedDocument.Status
+RegAuthCategory,BusinessLicenseApplication.Category
+RegulatoryBodyType,CareProviderAdverseAction.RegulatoryBodyType
+ReopenReason,CareRequest.ReopenReason
+RequestedCareCodeType,CareRequestItem.CodeType
+RequestedDrugCodeType,CareRequestDrug.CodeType
+RequestedLevelOfCare,CareRequest.RequestedLevelOfCare
+RequesterType,CareRequest.RequesterType
+RequestingPractitionerLicense,CareRequest.RequestingPractitionerLicense
+RequestingPractitionerSpecialty,CareRequest.RequestingPractitionerSpecialty
+ResidenceStatusType,BusinessLicense.ResidenceStatus
+RoleInTerritory,UserTerritoryAssociation.RoleInTerritory
+ResourceAbsenceType,ResourceAbsence.Type
+ReturnOrderLineItemProcessPlan,ReturnOrderLineItem.ProcessingPlan
+ReturnOrderLineItemReasonForRejection,ReturnOrderLineItem.ReasonForRejection
+ReturnOrderLineItemReasonForReturn,ReturnOrderLineItem.ReasonForReturn
+ReturnOrderLineItemRepaymentMethod,ReturnOrderLineItem.RepaymentMethod
+ReturnOrderShipmentType,ReturnOrder.ShipmentType
+ReturnOrderStatus,ReturnOrder.Status
+SalesTeamRole,OpportunityTeamMember.TeamMemberRole;UserAccountTeamMember.TeamMemberRole;UserTeamMember.TeamMemberRole;AccountTeamMember.TeamMemberRole
+Salutation,CampaignMember.Salutation;Contact.Salutation;Lead.Salutation
+SAppointmentGroupStatus,ServiceAppointmentGroup.Status
+ScorecardMetricCategory,ScorecardMetric.Category
+ScienceBasedTargetStatus,SustainabilityScorecard.ScienceBasedTargetStatus
+SContributionSumCategory,SocialContributionSum.Category
+ScopeCrbnFtprntStage,ScopeCrbnFtprnt.FootprintStage
+ServiceAppointmentStatus,ServiceAppointment.Status
+ServiceContractApprovalStatus,ServiceContract.ApprovalStatus
+ServicePlanTemplateStatus,CarePlanTemplate.Status
+ServicingPractitionerLicense,CareRequest.ServicingPractitionerLicense
+ServicingPractitionerSpecialty,CareRequest.ServicingPractitionerSpecialty
+ServTerrMemRoleType,ServiceTerritoryMember.Role
+ShiftStatus,Shift.Status
+SocialContributionSumType,SocialContributionSum.Type
+SocialPostClassification,SocialPost.Classification
+SocialPostEngagementLevel,SocialPost.EngagementLevel
+SocialPostReviewedStatus,SocialPost.ReviewedStatus
+SolutionStatus,Solution.Status
+SourceBusinessRegion,ScopeEmssnSrc.BusinessRegion;StnryAssetEnvrSrc.BusinessRegion;VehicleAssetEmssnSrc.BusinessRegion
+StatusReason,Asset.StatusReason
+StnryAssetCrbnFtprntStage,StnryAssetCrbnFtprnt.FootprintStage
+StnryAstCrbnFtAllocStatus,StnryAssetCrbnFtprnt.AllocationStatus
+StnryAstCrbnFtDataGapSts,StnryAssetCrbnFtprnt.DataGapStatus
+StnryAstCrbnFtAllocStatus,StnryAssetCrbnFtprnt.AllocationStatus
+StnryAstCrbnFtDataGapSts,StnryAssetCrbnFtprnt.DataGapStatus
+StnryAstEvSrcStnryAstTyp,StnryAssetEnvrSrc.StationaryAssetType
+StnryAssetWaterFtprntStage,StnryAssetWaterFtprnt.FootprintStage
+SupplierClassification,SustainabilityScorecard.SupplierClassification
+SupplierEmssnRdctnCmtTypev,SustainabilityScorecard.SupplierEmssnRdctnCmtType
+SupplierReportingScope,SustainabilityScorecard.SupplierReportingScope
+SupplierTier,SustainabilityScorecard.SupplierTier
+SustainabilityScorecardStatus,SustainabilityScorecard.Status
+TaskPriority,Task.Priority
+TaskStatus,Task.Status
+TaskSubject,Task.Subject
+TaskType,Task.Type
+TCDDetailType,TrackedCommunicationDetail.DetailType
+TCPriority,TrackedCommunication.Priority
+TCStatus,TrackedCommunication.Status
+TCStatusReason,TrackedCommunication.StatusReason
+TopicFailureReasonEnum,EngagementTopic.ProcessFailureReason
+TopicProcessStatusEnum,EngagementTopic.ProcessStatus
+TrackedCommunicationType,TrackedCommunication.Type
+TypesOfIntervention,CareInterventionType.InterventionType
+UnitOfMeasure,ConsumptionSchedule.UnitOfMeasure
+UnitOfMeasureType,UnitOfMeasure.Type
+VehicleAstCrbnFtprntStage,VehicleAssetCrbnFtprnt.FootprintStage
+VehicleType,VehicleAssetCrbnFtprnt.VehicleType;VehicleAssetEmssnSrc.VehicleType
+WasteFootprintStage,WasteFootprint.FootprintStage
+WasteDisposalType,WstDispoEmssnFctrSetItm.DisposalType
+WasteType,WstDispoEmssnFctrSetItm.WasteType
+WorkOrderLineItemPriority,WorkOrderLineItem.Priority
+WorkOrderLineItemStatus,WorkOrderLineItem.Status
+WorkOrderPriority,WorkOrder.Priority
+WorkOrderStatus,WorkOrder.Status
+WorkStepStatus,WorkStep.Status
+WorkTypeDefApptType,ServiceAppointment.AppointmentType
+WorkTypeGroupAddInfo,WorkTypeGroup.AdditionalInformation"""
+
+def STANDARD_VALUE_SETS():
+    f = StringIO(STANDARD_VALUE_SETS_CSV)
+    reader = csv.reader(f, delimiter=',')
+    next(reader)
+    return {row[0]: row[1].split(';') for row in reader}
