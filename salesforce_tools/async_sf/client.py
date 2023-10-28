@@ -122,11 +122,11 @@ class SalesforceAPISelector():
         if base_url_parameters:
             self.base_url_parameters |= base_url_parameters
 
-    def sfdx_login(self, org):
+    def sfdx_login(self, org, sfdx_cmd='sf'):
         import subprocess
         import re
 
-        result = subprocess.run(['sf', 'org', 'display', '-o', org, '--json', '--verbose'], stdout=subprocess.PIPE)
+        result = subprocess.run([sfdx_cmd, 'org', 'display', '-o', org, '--json', '--verbose'], stdout=subprocess.PIPE)
         ansi_escape = re.compile(r'\x1B\[[0-?]*[ -/]*[@-~]')
         result = ansi_escape.sub('', result.stdout.decode(encoding='utf-8', errors='strict'))
         result = json.loads(result)['result']
