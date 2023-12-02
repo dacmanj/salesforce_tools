@@ -1,8 +1,8 @@
 import urllib.parse
 from salesforce_tools.salesforce import SalesforceAPI
 from enum import Enum
-from salesforce_tools.bulk_models import JobInfo, JobInfoList, BatchInfo, BatchInfoList, \
-    OperationEnum, ContentTypeEnum, ContentTypeHeaderEnum, JobTypeEnum, JobStateEnum, BulkAPIError, APIError,\
+from salesforce_tools.models.bulk import JobInfo, JobInfoList, BatchInfo, BatchInfoList, \
+    ContentTypeHeaderEnum, JobTypeEnum, JobStateEnum, BulkAPIError, APIError, \
     BulkException
 from typing import Union, Optional, List
 from pydantic import BaseModel, ValidationError, TypeAdapter
@@ -67,7 +67,7 @@ class BulkAPI(SalesforceAPI):
         url = self._get_job_url()
 
         if not job.id:
-            d = job.dict(by_alias=True, exclude_none=True, exclude={'job_type'})
+            d = job.model_dump(by_alias=True, exclude_none=True, exclude={'job_type'})
             job, ok, *_ = self.request(url, method='POST', json=d)
             self.job = self._model_wrap(job, ok, JobInfo)
             if ok:

@@ -3,13 +3,8 @@ from time import sleep
 import csv
 from io import StringIO
 
-import urllib.parse
-from enum import Enum
-from salesforce_tools.bulk_models import JobInfo, JobInfoList, BatchInfo, BatchInfoList, \
-    OperationEnum, ContentTypeEnum, ContentTypeHeaderEnum, JobTypeEnum, JobStateEnum, BulkAPIError, APIError,\
-    BulkException
-from typing import Union, Optional, List
-from pydantic import BaseModel, ValidationError
+from salesforce_tools.models.bulk import JobInfo, JobStateEnum
+
 
 class BulkAPI(object):
     def __init__(self, sf: SalesforceAPISelector):
