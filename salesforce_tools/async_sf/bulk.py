@@ -3,7 +3,7 @@ from time import sleep
 import csv
 from io import StringIO
 
-from salesforce_tools.models.bulk import JobInfo, JobStateEnum
+from salesforce_tools.models.bulk_xsd import JobInfo, JobStateEnum
 
 
 class BulkAPI(object):

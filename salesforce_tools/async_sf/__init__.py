@@ -1,3 +1,3 @@
-from salesforce_tools.async_sf.client import SalesforceAsyncOAuth2Client, SalesforceSfdxAsyncOAuth2Client, SalesforceAPISelector
+from salesforce_tools.client import SalesforceAsyncOAuth2Client, SalesforceAPISelector
 from salesforce_tools.async_sf.metadata import SalesforceMetadataFetcherAsync
 from salesforce_tools.async_sf.bulk import BulkAPI

@@ -1,5 +1,5 @@
 import asyncio
-from salesforce_tools.async_sf.client import SalesforceAPISelector
+from salesforce_tools.client import SalesforceAPISelector
 from salesforce_tools.metadata import split_api_name
 from urllib.parse import quote
 import itertools

@@ -1,19 +1,14 @@
 import urllib.parse
 from salesforce_tools.salesforce import SalesforceAPI
-from enum import Enum
-from salesforce_tools.models.bulk import JobInfo, JobInfoList, BatchInfo, BatchInfoList, \
-    ContentTypeHeaderEnum, JobTypeEnum, JobStateEnum, BulkAPIError, APIError, \
-    BulkException
+from salesforce_tools.models.bulk import BulkAPIError, APIError, BulkException
+from salesforce_tools.models.bulk_xsd import JobInfo, BatchInfo, BatchInfoList, \
+    JobStateEnum, JobTypeEnum, ContentTypeHeaderEnum, JobInfoList
 from typing import Union, Optional, List
 from pydantic import BaseModel, ValidationError, TypeAdapter
 
 
 class BulkJobException(Exception):
     pass
-
-
-def get_enum_or_val(e):
-    return e.value if isinstance(e, Enum) else e
 
 
 class BulkAPI(SalesforceAPI):
@@ -27,12 +22,8 @@ class BulkAPI(SalesforceAPI):
     @job.setter
     def job(self, value: JobInfo):
         if value and isinstance(value, JobInfo):
-            value.job_type = value.job_type or (JobTypeEnum.V2Ingest
-                                                if value.content_url and 'ingest' in value.content_url
-                                                else JobTypeEnum.Classic)
+            value.job_type = value.job_type or JobTypeEnum.Classic
             self.job_type = value.job_type
-        else:
-            self.job_type = JobTypeEnum.Classic
         self.__job = value
 
     def __init__(self, job_id: str = None, job: JobInfo = None, **kwargs):
@@ -50,31 +41,26 @@ class BulkAPI(SalesforceAPI):
             else:
                 return f'/services/async/{self.api_version}/job/{self.job.id}/batch'
 
-    def _get_job_url(self, job_type=None, operation=None):
+    def _get_job_url(self, job_type=None):
         job_type = job_type or self.job_type
-        operation = operation or self.job.operation if isinstance(self.job, JobInfo) else None
-        url = f'/services/data/v{self.api_version}/jobs/ingest' if job_type == JobTypeEnum.V2Ingest else \
-            f'/services/async/{self.api_version}/job'
-        if operation == 'query':
+        # job.id starts with 750 = bulk v1?
+        if job_type == JobTypeEnum.V2Ingest:
+            url = f'/services/data/v{self.api_version}/jobs/ingest'
+        elif job_type == JobTypeEnum.V2Query:
             url = f'/services/data/v{self.api_version}/jobs/query'
         else:
-            return f'/services/async/{self.api_version}/job'
+            url = f'/services/async/{self.api_version}/job'
         return url
 
     def create_job(self, job: JobInfo):
         self.job = job
-        job_type = JobTypeEnum.V2Ingest if job.job_type == JobTypeEnum.V2Ingest else JobTypeEnum.Classic
         url = self._get_job_url()
-
         if not job.id:
-            d = job.model_dump(by_alias=True, exclude_none=True, exclude={'job_type'})
+            d = {k: v for k, v in job.to_api().items() if v and k not in ['jobType']}
             job, ok, *_ = self.request(url, method='POST', json=d)
             self.job = self._model_wrap(job, ok, JobInfo)
-            if ok:
-                self.job.job_type = job_type
         return self.job
 
-    # TODO: Where to put "static helper methods"?
     def get_jobs(self):
         jobs, ok, *_ = self.request(f'/services/data/v{self.api_version}/jobs/ingest')
         return self._model_wrap(jobs, ok, JobInfoList, False)
@@ -92,28 +78,32 @@ class BulkAPI(SalesforceAPI):
 
     def _model_wrap(self, data: any, ok: bool, model: BaseModel, raise_exception_on_error=False):
         if ok:
-            o = TypeAdapter(model).validate_python(data)
+            o = JobInfo(**data)
         else:
             if isinstance(data, list):
                 try:
-                    o = TypeAdapter(List[BulkAPIError]).validate_python(data)
-                except ValidationError:
-                    o = TypeAdapter(List[APIError]).validate_python(data)
+                    o = [BulkAPIError(**i) for i in data]
+                except (ValueError, TypeError):
+                    o = [APIError(**i) for i in data]
             else:
                 if data.get('error'):
                     data = data.get('error')
                 try:
-                    o = TypeAdapter(BulkAPIError).validate_python(data)
-                except Exception:
-                    o = TypeAdapter(APIError).validate_python(data)
+                    o = BulkAPIError(**data)
+                except (ValueError, TypeError):
+                    o = APIError(**data)
 
             if raise_exception_on_error:
                 raise ValueError(o)
         return o
 
-    def close_job(self, job_id: str = None, state: JobStateEnum = JobStateEnum.UploadComplete):
+    def close_job(self, job_id: str = None):
+        if self.job.operation == 'query':
+            state = JobStateEnum.Closed
+        else:
+            state = JobStateEnum.UploadComplete
         job_id = job_id or self.job.id
-        url = f'/services/async/{self.api_version}/job/{job_id}'
+        url = f'{self._get_job_url()}/{job_id}'
         data, ok, *_ = self.request(url, method='POST', json={"state": state.value})
         job = self._model_wrap(data, ok, JobInfo, False)
         if ok and job.id == self.job.id:
