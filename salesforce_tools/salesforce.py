@@ -20,7 +20,7 @@ class SalesforceAPI(object):
 
     @property
     def api_version(self):
-        return self.args.get('api_version') or '64.0'
+        return self.args.get('api_version') or '56.0'
 
     def request(self, url, method='GET', **kwargs):
         kwargs['headers'] = kwargs.get('headers', {'Content-Type': 'application/json',

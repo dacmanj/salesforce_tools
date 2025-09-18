@@ -4,7 +4,7 @@ import random
 import json
 import sqlite3
 
-API_VERSION = 64.0
+API_VERSION = 54.0
 
 
 
