@@ -4,7 +4,8 @@ version = "0.3.7"
 description = "Salesforce API tools"
 authors = [
     { name = "David Manuel", email = "dmanuel@fionta.com" },
-]license = "MIT"
+]
+license = "MIT"
 homepage = "https://github.com/dacmanj/salesforce-tools"
 repository = "https://github.com/dacmanj/salesforce-tools"
 
