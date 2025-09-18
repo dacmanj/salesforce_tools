@@ -16,7 +16,7 @@ class SalesforceAsyncOAuth2Client(AsyncOAuth2Client):
             default_auth_url = 'https://test.salesforce.com' if kwargs.get(
                 'sandbox') else 'https://login.salesforce.com'
             self.instance_url = kwargs.get('auth_url', default_auth_url)
-        self.api_version = str(kwargs.get('api_version', '56.0'))
+        self.api_version = str(kwargs.get('api_version', '64.0'))
         client_args = {k: v for k, v in kwargs.items() if k not in ['instance_url', 'api_version', 'sandbox']}
         if self.instance_url and self.api_version and not kwargs.get('base_url'):
             client_args['base_url'] = f"{self.instance_url}/services/data/v{self.api_version}/"
