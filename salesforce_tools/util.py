@@ -11,13 +11,6 @@ https://developer.salesforce.com/docs/marketing/marketing-cloud/guide/using_regu
 EMAIL_ADDRESS_REGEX = r"""^[a-z0-9!#$%&'*+\/=?^_`{|}~-]+(?:\.[a-z0-9!#$%&'*+\/=?^_`{|}~-]+)*@(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$"""
 
 
-class SFEmail(str):
-    def __init__(self, string):
-        if not re.match(EMAIL_ADDRESS_REGEX, string):
-            raise ValueError(f'Invalid email address: {string}')
-        super().__init__()
-
-
 class SFDateTime(datetime):
     @property
     def sf_iso(self):
